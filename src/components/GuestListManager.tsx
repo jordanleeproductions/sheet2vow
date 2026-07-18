@@ -209,7 +209,7 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
                   {(['No Response', 'Attending', 'Declined'] as RSVPStatus[]).map((status) => {
                     const isSelected = guest.rsvpStatus === status;
                     const btnStyle = isSelected 
-                      ? { ...styles.rsvpToggleBtn, backgroundColor: rsvpColor, color: '#fff', border: `1px solid ${rsvpColor}` }
+                      ? { ...styles.rsvpToggleBtn, backgroundColor: rsvpColor, color: rsvpColor === 'var(--color-primary)' ? 'var(--color-on-primary)' : '#fff', border: `1px solid ${rsvpColor}` }
                       : styles.rsvpToggleBtn;
 
                     return (
@@ -402,7 +402,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     fontWeight: 600,
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     padding: '0.5rem 0.75rem',
@@ -566,7 +566,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modalHeader: {
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     padding: '1rem 1.25rem',
     display: 'flex',
     justifyContent: 'space-between',
@@ -575,12 +575,12 @@ const styles: Record<string, React.CSSProperties> = {
   modalTitle: {
     fontFamily: 'var(--font-serif)',
     fontSize: '1.15rem',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     cursor: 'pointer',
   },
   form: {
@@ -607,12 +607,16 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-sm)',
     fontSize: '0.85rem',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   select: {
     padding: '0.5rem',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-sm)',
     fontSize: '0.85rem',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   textarea: {
     padding: '0.5rem',
@@ -620,6 +624,8 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--border-radius-sm)',
     fontSize: '0.85rem',
     fontFamily: 'var(--font-sans)',
+    width: '100%',
+    boxSizing: 'border-box',
   },
   formActions: {
     display: 'flex',
@@ -645,7 +651,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     padding: '0.5rem 1rem',
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     cursor: 'pointer',

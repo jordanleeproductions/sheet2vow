@@ -7,7 +7,8 @@ import GuestListManager from '@/components/GuestListManager';
 import BudgetLedgerManager from '@/components/BudgetLedgerManager';
 import TimelineManager from '@/components/TimelineManager';
 import KanbanBoard from '@/components/KanbanBoard';
-import { RefreshCw, HardDrive, Heart, Sparkles, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import VendorManager from '@/components/VendorManager';
+import { RefreshCw, HardDrive, Heart, Sparkles, AlertCircle, FileSpreadsheet, Settings } from 'lucide-react';
 
 export default function Sheet2VowDashboard() {
   // Authentication & Spreadsheet Settings
@@ -16,7 +17,13 @@ export default function Sheet2VowDashboard() {
   const [isOnboarded, setIsOnboarded] = useState<boolean>(false);
   const [isMockMode, setIsMockMode] = useState<boolean>(true);
   const [weddingName, setWeddingName] = useState<string>('');
+  const [weddingDate, setWeddingDate] = useState<string>('');
   const [budgetThreshold, setBudgetThreshold] = useState<number>(35000);
+
+  // Theme and Settings
+  const [theme, setTheme] = useState<'light'|'dark'>('light');
+  const [primaryColor, setPrimaryColor] = useState<string>('');
+  const [showSettings, setShowSettings] = useState<boolean>(false);
 
   // App Data & Loading states
   const [weddingData, setWeddingData] = useState<WeddingData | null>(null);
@@ -25,7 +32,7 @@ export default function Sheet2VowDashboard() {
   const [syncError, setSyncError] = useState<string | null>(null);
   
   // Navigation
-  const [activeTab, setActiveTab] = useState<'metrics' | 'guests' | 'budget' | 'schedule' | 'tasks'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'guests' | 'budget' | 'schedule' | 'tasks' | 'vendors'>('metrics');
 
   // Load configuration from local storage on mount
   useEffect(() => {
@@ -34,13 +41,32 @@ export default function Sheet2VowDashboard() {
     const savedOnboarded = localStorage.getItem('s2v_is_onboarded');
     const savedMock = localStorage.getItem('s2v_is_mock');
     const savedName = localStorage.getItem('s2v_wedding_name');
+    const savedDate = localStorage.getItem('s2v_wedding_date');
+    const savedTheme = localStorage.getItem('s2v_theme');
+    const savedColor = localStorage.getItem('s2v_primary_color');
 
     if (savedSheetId) setSpreadsheetId(savedSheetId);
     if (savedToken) setGoogleToken(savedToken);
     if (savedOnboarded === 'true') setIsOnboarded(true);
     if (savedMock === 'false') setIsMockMode(false);
     if (savedName) setWeddingName(savedName);
+    if (savedDate) setWeddingDate(savedDate);
+    if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
+    if (savedColor) setPrimaryColor(savedColor);
   }, []);
+
+  // Apply theme when it changes
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('s2v_theme', theme);
+    if (primaryColor) {
+      document.documentElement.style.setProperty('--color-primary', primaryColor);
+      localStorage.setItem('s2v_primary_color', primaryColor);
+    } else {
+      document.documentElement.style.removeProperty('--color-primary');
+      localStorage.removeItem('s2v_primary_color');
+    }
+  }, [theme, primaryColor]);
 
   // Fetch data whenever spreadsheetId changes or on refresh
   useEffect(() => {
@@ -118,6 +144,7 @@ export default function Sheet2VowDashboard() {
         localStorage.setItem('s2v_is_onboarded', 'true');
         localStorage.setItem('s2v_is_mock', isMockMode ? 'true' : 'false');
         localStorage.setItem('s2v_wedding_name', res.weddingName);
+        localStorage.setItem('s2v_wedding_date', weddingDate);
       } else {
         throw new Error(res.error || 'Onboarding failed');
       }
@@ -194,7 +221,20 @@ export default function Sheet2VowDashboard() {
       localStorage.removeItem('s2v_is_onboarded');
       localStorage.removeItem('s2v_is_mock');
       localStorage.removeItem('s2v_wedding_name');
+      localStorage.removeItem('s2v_wedding_date');
+      localStorage.removeItem('s2v_theme');
+      localStorage.removeItem('s2v_primary_color');
     }
+  };
+
+  const getCountdown = () => {
+    if (!weddingDate) return "DATE NOT SET";
+    const today = new Date();
+    const target = new Date(weddingDate);
+    const diffTime = target.getTime() - today.getTime();
+    if (diffTime < 0) return "JUST MARRIED!";
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return `${diffDays} DAYS UNTIL THE WEDDING!`;
   };
 
   return (
@@ -210,9 +250,48 @@ export default function Sheet2VowDashboard() {
         </div>
         
         {isOnboarded && (
-          <button style={styles.disconnectBtn} onClick={handleDisconnect}>
-            DISCONNECT
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button style={styles.iconBtn} onClick={() => setShowSettings(!showSettings)}>
+              <Settings size={20} />
+            </button>
+            {showSettings && (
+              <div style={styles.settingsDropdown}>
+                <div style={styles.settingsSection}>
+                  <label style={styles.settingsLabel}>THEME</label>
+                  <div style={styles.themeToggle}>
+                    <button style={{ ...styles.themeBtn, fontWeight: theme === 'light' ? 'bold' : 'normal', backgroundColor: theme === 'light' ? 'var(--color-primary)' : 'transparent', color: theme === 'light' ? '#fff' : 'var(--color-text)' }} onClick={() => setTheme('light')}>LIGHT</button>
+                    <button style={{ ...styles.themeBtn, fontWeight: theme === 'dark' ? 'bold' : 'normal', backgroundColor: theme === 'dark' ? 'var(--color-primary)' : 'transparent', color: theme === 'dark' ? '#fff' : 'var(--color-text)' }} onClick={() => setTheme('dark')}>DARK</button>
+                  </div>
+                </div>
+                <div style={styles.settingsSection}>
+                  <label style={styles.settingsLabel}>PRIMARY COLOR</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input 
+                      type="color" 
+                      value={primaryColor || (theme === 'dark' ? '#f5f5f5' : '#0d1b2a')} 
+                      onChange={(e) => setPrimaryColor(e.target.value)}
+                      style={{ padding: 0, border: 'none', width: '24px', height: '24px', cursor: 'pointer', background: 'transparent' }}
+                    />
+                    <button 
+                      onClick={() => setPrimaryColor('')}
+                      style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', padding: '0.25rem 0.5rem', background: 'transparent', border: '1px solid var(--color-muted)', borderRadius: '4px', cursor: 'pointer', color: 'var(--color-text)' }}
+                    >
+                      RESET
+                    </button>
+                  </div>
+                </div>
+                <div style={styles.settingsSection}>
+                  <label style={styles.settingsLabel}>DATA SOURCE</label>
+                  <a href={isMockMode ? '#' : `https://docs.google.com/spreadsheets/d/${spreadsheetId}`} target="_blank" rel="noopener noreferrer" style={styles.sheetLink}>
+                    {isMockMode ? 'MOCK DATA (NO SPREADSHEET)' : 'OPEN GOOGLE SHEET'}
+                  </a>
+                </div>
+                <button style={styles.disconnectBtn} onClick={handleDisconnect} style={{ width: '100%', marginTop: '0.5rem' }}>
+                  DISCONNECT
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </header>
 
@@ -292,6 +371,17 @@ export default function Sheet2VowDashboard() {
             </div>
 
             <div style={styles.fieldGroup}>
+              <label style={styles.label}>WEDDING DATE *</label>
+              <input
+                type="date"
+                required
+                value={weddingDate}
+                onChange={(e) => setWeddingDate(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
               <label style={styles.label}>TOTAL BUDGET LIMIT ($) *</label>
               <input
                 type="number"
@@ -361,7 +451,7 @@ export default function Sheet2VowDashboard() {
           {/* Target Wedding Milestone Header */}
           <div style={styles.weddingTitleHeader}>
             <h2 style={styles.weddingNameText}>{weddingName.toUpperCase()}</h2>
-            <div style={styles.weddingMilestoneDate}>OCTOBER 15, 2026 • SINGLE-TENANT DATA MODEL</div>
+            <div style={styles.weddingMilestoneDate}>{getCountdown()}</div>
           </div>
 
           {/* Navigation tabs */}
@@ -371,6 +461,7 @@ export default function Sheet2VowDashboard() {
               { id: 'guests', label: '[ GUEST LIST ]' },
               { id: 'budget', label: '[ LEDGER ]' },
               { id: 'schedule', label: '[ TIMELINE ]' },
+              { id: 'vendors', label: '[ VENDORS ]' },
               { id: 'tasks', label: '[ KANBAN CHECKLIST ]' },
             ].map(tab => (
               <button
@@ -420,6 +511,14 @@ export default function Sheet2VowDashboard() {
                 <TimelineManager
                   schedule={weddingData.schedule}
                   onUpdate={(data) => syncUpdate('schedule', data)}
+                  isSyncing={isSyncing}
+                />
+              )}
+
+              {activeTab === 'vendors' && weddingData && (
+                <VendorManager
+                  vendors={weddingData.vendors}
+                  onUpdate={(data) => syncUpdate('vendors', data)}
                   isSyncing={isSyncing}
                 />
               )}
@@ -572,7 +671,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.825rem',
     fontWeight: 700,
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     padding: '0.875rem',
@@ -657,13 +756,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   navbar: {
     display: 'flex',
-    overflowX: 'auto',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     borderBottom: '1px solid var(--color-primary)',
-    gap: '1rem',
+    gap: '0.5rem 1rem',
     marginBottom: '2rem',
     paddingBottom: '2px',
-    whiteSpace: 'nowrap',
-    scrollbarWidth: 'none', // for firefox
   },
   navTabBtn: {
     fontFamily: 'var(--font-mono)',
@@ -706,5 +804,60 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#ef4444',
     fontSize: '0.75rem',
     fontFamily: 'var(--font-sans)',
+  },
+  iconBtn: {
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--color-primary)',
+    cursor: 'pointer',
+    padding: '0.25rem',
+  },
+  settingsDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: '0.5rem',
+    backgroundColor: 'var(--color-bg)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+    boxShadow: 'var(--box-shadow-hover)',
+    padding: '1rem',
+    minWidth: '220px',
+    zIndex: 10,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  settingsSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+  },
+  settingsLabel: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    color: 'var(--color-muted)',
+    fontWeight: 600,
+  },
+  themeToggle: {
+    display: 'flex',
+    gap: '0.25rem',
+  },
+  themeBtn: {
+    flex: 1,
+    padding: '0.35rem 0',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  sheetLink: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    color: 'var(--color-primary)',
+    textDecoration: 'none',
+    fontWeight: 600,
   }
 };

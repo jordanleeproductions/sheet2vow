@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { BudgetItem } from '@/lib/sheets/types';
-import { Plus, Edit2, Check, X, Trash2, HelpCircle } from 'lucide-react';
+import { Plus, Edit2, Check, X, Trash2, HelpCircle, Grid, List } from 'lucide-react';
 
 interface BudgetLedgerManagerProps {
   budget: BudgetItem[];
@@ -11,21 +11,13 @@ interface BudgetLedgerManagerProps {
 }
 
 export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: BudgetLedgerManagerProps) {
-  // Editing state
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<BudgetItem>>({});
-  
-  // Adding state
+  // View mode state
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+
+  // Form Modal state
+  const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
   const [isAdding, setIsAdding] = useState(false);
-  const [addForm, setAddForm] = useState<Partial<BudgetItem>>({
-    category: '',
-    vendorName: '',
-    estimatedCost: 0,
-    actualCost: 0,
-    amountPaid: 0,
-    dueDate: '',
-    paymentStatus: 'Pending',
-  });
+  const [formState, setFormState] = useState<Partial<BudgetItem>>({});
 
   // Unique categories for summaries
   const categories = Array.from(new Set(budget.map(item => item.category).filter(Boolean)));
@@ -36,64 +28,9 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
   const totalPaid = budget.reduce((sum, item) => sum + item.amountPaid, 0);
   const totalBalance = budget.reduce((sum, item) => sum + (item.actualCost - item.amountPaid), 0);
 
-  // Edit action
-  const startEdit = (item: BudgetItem) => {
-    setEditingId(item.itemId);
-    setEditForm(item);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditForm({});
-  };
-
-  const handleEditChange = (field: keyof BudgetItem, value: any) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: field === 'estimatedCost' || field === 'actualCost' || field === 'amountPaid'
-        ? Number(value) || 0
-        : value
-    }));
-  };
-
-  const saveEdit = async (itemId: string) => {
-    if (isSyncing) return;
-    const updated = budget.map(item => 
-      item.itemId === itemId ? { ...(item), ...editForm } as BudgetItem : item
-    );
-    await onUpdate(updated);
-    setEditingId(null);
-    setEditForm({});
-  };
-
-  // Add action
-  const handleAddChange = (field: keyof BudgetItem, value: any) => {
-    setAddForm(prev => ({
-      ...prev,
-      [field]: field === 'estimatedCost' || field === 'actualCost' || field === 'amountPaid'
-        ? Number(value) || 0
-        : value
-    }));
-  };
-
-  const saveNewItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSyncing) return;
-
-    const newItem: BudgetItem = {
-      itemId: `B${budget.length + 1}`,
-      category: addForm.category || 'General',
-      vendorName: addForm.vendorName || 'TBD',
-      estimatedCost: addForm.estimatedCost || 0,
-      actualCost: addForm.actualCost || 0,
-      amountPaid: addForm.amountPaid || 0,
-      dueDate: addForm.dueDate || '',
-      paymentStatus: addForm.paymentStatus || 'Pending',
-    };
-
-    await onUpdate([...budget, newItem]);
-    setIsAdding(false);
-    setAddForm({
+  // Form actions
+  const startAdd = () => {
+    setFormState({
       category: '',
       vendorName: '',
       estimatedCost: 0,
@@ -102,9 +39,58 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
       dueDate: '',
       paymentStatus: 'Pending',
     });
+    setIsAdding(true);
+    setEditingItem(null);
   };
 
-  // Delete action
+  const startEdit = (item: BudgetItem) => {
+    setFormState(item);
+    setEditingItem(item);
+    setIsAdding(false);
+  };
+
+  const closeModal = () => {
+    setIsAdding(false);
+    setEditingItem(null);
+    setFormState({});
+  };
+
+  const handleFormChange = (field: keyof BudgetItem, value: any) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: field === 'estimatedCost' || field === 'actualCost' || field === 'amountPaid'
+        ? Number(value) || 0
+        : value
+    }));
+  };
+
+  const saveItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSyncing) return;
+
+    let updatedBudget: BudgetItem[];
+    if (isAdding) {
+      const newItem: BudgetItem = {
+        itemId: `B${budget.length + 1}`,
+        category: formState.category || 'General',
+        vendorName: formState.vendorName || 'TBD',
+        estimatedCost: formState.estimatedCost || 0,
+        actualCost: formState.actualCost || 0,
+        amountPaid: formState.amountPaid || 0,
+        dueDate: formState.dueDate || '',
+        paymentStatus: formState.paymentStatus || 'Pending',
+      };
+      updatedBudget = [...budget, newItem];
+    } else {
+      updatedBudget = budget.map(item => 
+        item.itemId === editingItem?.itemId ? { ...item, ...formState } as BudgetItem : item
+      );
+    }
+
+    await onUpdate(updatedBudget);
+    closeModal();
+  };
+
   const deleteItem = async (itemId: string) => {
     if (isSyncing || !confirm('Are you sure you want to delete this budget item?')) return;
     const updated = budget.filter(item => item.itemId !== itemId);
@@ -116,238 +102,75 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
       {/* Header */}
       <div style={styles.header}>
         <h2 style={styles.title}>Budget Ledger</h2>
-        <button 
-          style={styles.addButton} 
-          onClick={() => setIsAdding(!isAdding)} 
-          disabled={isSyncing}
-        >
-          {isAdding ? <X size={16} style={{ marginRight: '0.25rem' }} /> : <Plus size={16} style={{ marginRight: '0.25rem' }} />} 
-          {isAdding ? 'CANCEL' : 'ADD ITEM'}
-        </button>
+        <div style={styles.headerActions}>
+          <div style={styles.viewToggle}>
+            <button
+              style={{ ...styles.toggleBtn, backgroundColor: viewMode === 'table' ? 'var(--color-primary)' : 'transparent', color: viewMode === 'table' ? '#fff' : 'var(--color-muted)' }}
+              onClick={() => setViewMode('table')}
+              title="Table View"
+            >
+              <List size={16} />
+            </button>
+            <button
+              style={{ ...styles.toggleBtn, backgroundColor: viewMode === 'card' ? 'var(--color-primary)' : 'transparent', color: viewMode === 'card' ? '#fff' : 'var(--color-muted)' }}
+              onClick={() => setViewMode('card')}
+              title="Card View"
+            >
+              <Grid size={16} />
+            </button>
+          </div>
+          <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
+            <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD ITEM
+          </button>
+        </div>
       </div>
 
-      {/* Adding Panel */}
-      {isAdding && (
-        <form onSubmit={saveNewItem} style={styles.addPanel}>
-          <h3 style={styles.panelTitle}>ADD BUDGET LINE ITEM</h3>
-          <div style={styles.formGrid}>
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>CATEGORY</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Catering, Venue"
-                value={addForm.category}
-                onChange={(e) => handleAddChange('category', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-            
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>VENDOR NAME</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Grand Plaza"
-                value={addForm.vendorName}
-                onChange={(e) => handleAddChange('vendorName', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>ESTIMATED COST ($)</label>
-              <input
-                type="number"
-                min="0"
-                value={addForm.estimatedCost || ''}
-                onChange={(e) => handleAddChange('estimatedCost', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>ACTUAL COST ($)</label>
-              <input
-                type="number"
-                min="0"
-                value={addForm.actualCost || ''}
-                onChange={(e) => handleAddChange('actualCost', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>AMOUNT PAID ($)</label>
-              <input
-                type="number"
-                min="0"
-                value={addForm.amountPaid || ''}
-                onChange={(e) => handleAddChange('amountPaid', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>DUE DATE</label>
-              <input
-                type="date"
-                value={addForm.dueDate}
-                onChange={(e) => handleAddChange('dueDate', e.target.value)}
-                style={styles.input}
-              />
-            </div>
-
-            <div style={styles.fieldGroup}>
-              <label style={styles.label}>PAYMENT STATUS</label>
-              <select
-                value={addForm.paymentStatus}
-                onChange={(e) => handleAddChange('paymentStatus', e.target.value)}
-                style={styles.select}
-              >
-                <option value="Paid">Paid</option>
-                <option value="Pending">Pending</option>
-                <option value="Overdue">Overdue</option>
-              </select>
-            </div>
-
-            <div style={{ ...styles.fieldGroup, alignSelf: 'flex-end' }}>
-              <button type="submit" style={styles.saveSubmitBtn} disabled={isSyncing}>
-                {isSyncing ? 'SAVING...' : 'SAVE ITEM'}
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
-
-      {/* Ledger Table (Scrollable on Mobile) */}
-      <div style={styles.tableWrapper}>
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>CATEGORY</th>
-              <th style={styles.th}>VENDOR</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>ESTIMATED</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>ACTUAL</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>PAID</th>
-              <th style={{ ...styles.th, textAlign: 'right' }}>OWING</th>
-              <th style={styles.th}>DUE DATE</th>
-              <th style={styles.th}>STATUS</th>
-              <th style={{ ...styles.th, textAlign: 'center' }}>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody>
-            {budget.map((item) => {
-              const isEditing = editingId === item.itemId;
-              const owing = item.actualCost - item.amountPaid;
-              
-              return (
-                <tr key={item.itemId} style={styles.tr}>
-                  {/* Category */}
-                  <td style={styles.td}>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editForm.category || ''}
-                        onChange={(e) => handleEditChange('category', e.target.value)}
-                        style={styles.tableInput}
-                      />
-                    ) : (
+      {viewMode === 'table' ? (
+        /* Ledger Table View */
+        <div style={styles.tableWrapper}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>CATEGORY</th>
+                <th style={styles.th}>VENDOR</th>
+                <th style={{ ...styles.th, textAlign: 'right' }}>ESTIMATED</th>
+                <th style={{ ...styles.th, textAlign: 'right' }}>ACTUAL</th>
+                <th style={{ ...styles.th, textAlign: 'right' }}>PAID</th>
+                <th style={{ ...styles.th, textAlign: 'right' }}>OWING</th>
+                <th style={styles.th}>DUE DATE</th>
+                <th style={styles.th}>STATUS</th>
+                <th style={{ ...styles.th, textAlign: 'center' }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {budget.map((item) => {
+                const owing = item.actualCost - item.amountPaid;
+                return (
+                  <tr key={item.itemId} style={styles.tr}>
+                    <td style={styles.td}>
                       <span style={styles.categoryCell}>{item.category}</span>
-                    )}
-                  </td>
-
-                  {/* Vendor Name */}
-                  <td style={styles.td}>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editForm.vendorName || ''}
-                        onChange={(e) => handleEditChange('vendorName', e.target.value)}
-                        style={styles.tableInput}
-                      />
-                    ) : (
+                    </td>
+                    <td style={styles.td}>
                       <span>{item.vendorName}</span>
-                    )}
-                  </td>
-
-                  {/* Estimated Cost */}
-                  <td style={{ ...styles.td, textAlign: 'right' }}>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={editForm.estimatedCost !== undefined ? editForm.estimatedCost : item.estimatedCost}
-                        onChange={(e) => handleEditChange('estimatedCost', e.target.value)}
-                        style={{ ...styles.tableInput, textAlign: 'right' }}
-                      />
-                    ) : (
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
                       <span style={styles.monoText}>${item.estimatedCost.toLocaleString()}</span>
-                    )}
-                  </td>
-
-                  {/* Actual Cost */}
-                  <td style={{ ...styles.td, textAlign: 'right' }}>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={editForm.actualCost !== undefined ? editForm.actualCost : item.actualCost}
-                        onChange={(e) => handleEditChange('actualCost', e.target.value)}
-                        style={{ ...styles.tableInput, textAlign: 'right' }}
-                      />
-                    ) : (
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
                       <span style={styles.monoText}>${item.actualCost.toLocaleString()}</span>
-                    )}
-                  </td>
-
-                  {/* Amount Paid */}
-                  <td style={{ ...styles.td, textAlign: 'right' }}>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        value={editForm.amountPaid !== undefined ? editForm.amountPaid : item.amountPaid}
-                        onChange={(e) => handleEditChange('amountPaid', e.target.value)}
-                        style={{ ...styles.tableInput, textAlign: 'right' }}
-                      />
-                    ) : (
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'right' }}>
                       <span style={styles.monoText}>${item.amountPaid.toLocaleString()}</span>
-                    )}
-                  </td>
-
-                  {/* Owing (Calculated) */}
-                  <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
-                    <span style={{ ...styles.monoText, color: owing > 0 ? 'var(--color-primary)' : 'var(--color-muted)' }}>
-                      ${owing.toLocaleString()}
-                    </span>
-                  </td>
-
-                  {/* Due Date */}
-                  <td style={styles.td}>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        placeholder="YYYY-MM-DD"
-                        value={editForm.dueDate || ''}
-                        onChange={(e) => handleEditChange('dueDate', e.target.value)}
-                        style={styles.tableInput}
-                      />
-                    ) : (
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'right', fontWeight: 600 }}>
+                      <span style={{ ...styles.monoText, color: owing > 0 ? 'var(--color-primary)' : 'var(--color-muted)' }}>
+                        ${owing.toLocaleString()}
+                      </span>
+                    </td>
+                    <td style={styles.td}>
                       <span style={styles.monoText}>{item.dueDate || '-'}</span>
-                    )}
-                  </td>
-
-                  {/* Payment Status */}
-                  <td style={styles.td}>
-                    {isEditing ? (
-                      <select
-                        value={editForm.paymentStatus || 'Pending'}
-                        onChange={(e) => handleEditChange('paymentStatus', e.target.value)}
-                        style={styles.tableSelect}
-                      >
-                        <option value="Paid">Paid</option>
-                        <option value="Pending">Pending</option>
-                        <option value="Overdue">Overdue</option>
-                      </select>
-                    ) : (
+                    </td>
+                    <td style={styles.td}>
                       <span style={{
                         ...styles.statusTag,
                         backgroundColor: 
@@ -361,65 +184,130 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                       }}>
                         {item.paymentStatus.toUpperCase()}
                       </span>
-                    )}
-                  </td>
+                    </td>
+                    <td style={{ ...styles.td, textAlign: 'center' }}>
+                      <div style={styles.actionsCell}>
+                        <button style={styles.actionBtn} onClick={() => startEdit(item)}>
+                          <Edit2 size={12} />
+                        </button>
+                        <button 
+                          style={{ ...styles.actionBtn, color: '#ef4444' }} 
+                          onClick={() => deleteItem(item.itemId)}
+                          disabled={isSyncing}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              
+              {/* Table Footer Totals */}
+              <tr style={styles.footerTr}>
+                <td colSpan={2} style={{ ...styles.td, fontWeight: 700 }}>LEDGER TOTALS</td>
+                <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>
+                  <span style={styles.monoText}>${totalEstimate.toLocaleString()}</span>
+                </td>
+                <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>
+                  <span style={styles.monoText}>${totalActual.toLocaleString()}</span>
+                </td>
+                <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>
+                  <span style={styles.monoText}>${totalPaid.toLocaleString()}</span>
+                </td>
+                <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)' }}>
+                  <span style={styles.monoText}>${totalBalance.toLocaleString()}</span>
+                </td>
+                <td colSpan={3} style={styles.td}></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Card View Layout */
+        <div style={styles.cardGrid}>
+          {/* Ledger Total Card */}
+          <div style={{ ...styles.card, ...styles.totalCard }}>
+            <h3 style={{ ...styles.cardCategory, color: 'var(--color-on-primary)' }}>LEDGER TOTALS</h3>
+            <div style={styles.cardBody}>
+              <div style={styles.cardRow}>
+                <span style={styles.cardLabel}>ESTIMATED</span>
+                <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalEstimate.toLocaleString()}</span>
+              </div>
+              <div style={styles.cardRow}>
+                <span style={styles.cardLabel}>ACTUAL</span>
+                <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalActual.toLocaleString()}</span>
+              </div>
+              <div style={styles.cardRow}>
+                <span style={styles.cardLabel}>PAID</span>
+                <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalPaid.toLocaleString()}</span>
+              </div>
+              <div style={{ ...styles.cardRow, borderTop: '1px dotted rgba(255,255,255,0.5)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
+                <span style={{ ...styles.cardLabel, color: 'var(--color-on-primary)' }}>OWING</span>
+                <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalBalance.toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
 
-                  {/* Actions */}
-                  <td style={{ ...styles.td, textAlign: 'center' }}>
-                    <div style={styles.actionsCell}>
-                      {isEditing ? (
-                        <>
-                          <button 
-                            style={{ ...styles.actionBtn, color: '#10b981' }} 
-                            onClick={() => saveEdit(item.itemId)}
-                            disabled={isSyncing}
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button style={{ ...styles.actionBtn, color: '#ef4444' }} onClick={cancelEdit}>
-                            <X size={14} />
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button style={styles.actionBtn} onClick={() => startEdit(item)}>
-                            <Edit2 size={12} />
-                          </button>
-                          <button 
-                            style={{ ...styles.actionBtn, color: '#ef4444' }} 
-                            onClick={() => deleteItem(item.itemId)}
-                            disabled={isSyncing}
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            
-            {/* Table Footer Totals */}
-            <tr style={styles.footerTr}>
-              <td colSpan={2} style={{ ...styles.td, fontWeight: 700 }}>LEDGER TOTALS</td>
-              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>
-                <span style={styles.monoText}>${totalEstimate.toLocaleString()}</span>
-              </td>
-              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>
-                <span style={styles.monoText}>${totalActual.toLocaleString()}</span>
-              </td>
-              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700 }}>
-                <span style={styles.monoText}>${totalPaid.toLocaleString()}</span>
-              </td>
-              <td style={{ ...styles.td, textAlign: 'right', fontWeight: 700, color: 'var(--color-primary)' }}>
-                <span style={styles.monoText}>${totalBalance.toLocaleString()}</span>
-              </td>
-              <td colSpan={3} style={styles.td}></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          {budget.map(item => {
+            const owing = item.actualCost - item.amountPaid;
+            return (
+              <div key={item.itemId} style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <div style={styles.cardMeta}>
+                    <span style={{ ...styles.categoryCell, fontFamily: 'var(--font-serif)', fontSize: '1.25rem', textTransform: 'none' }}>{item.category}</span>
+                  </div>
+                  <div style={styles.cardActions}>
+                    <button style={styles.actionBtn} onClick={() => startEdit(item)}>
+                      <Edit2 size={12} />
+                    </button>
+                    <button style={{ ...styles.actionBtn, color: '#ef4444' }} onClick={() => deleteItem(item.itemId)} disabled={isSyncing}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </div>
+                <h3 style={{ ...styles.cardTitle, fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--color-muted)' }}>{item.vendorName}</h3>
+                
+                <div style={styles.cardBody}>
+                  <div style={styles.cardRow}>
+                    <span style={styles.cardLabel}>ESTIMATED</span>
+                    <span style={styles.cardValue}>${item.estimatedCost.toLocaleString()}</span>
+                  </div>
+                  <div style={styles.cardRow}>
+                    <span style={styles.cardLabel}>ACTUAL</span>
+                    <span style={styles.cardValue}>${item.actualCost.toLocaleString()}</span>
+                  </div>
+                  <div style={styles.cardRow}>
+                    <span style={styles.cardLabel}>PAID</span>
+                    <span style={styles.cardValue}>${item.amountPaid.toLocaleString()}</span>
+                  </div>
+                  <div style={{ ...styles.cardRow, fontWeight: 600 }}>
+                    <span style={styles.cardLabel}>OWING</span>
+                    <span style={{ ...styles.cardValue, color: owing > 0 ? 'var(--color-primary)' : 'var(--color-text)' }}>${owing.toLocaleString()}</span>
+                  </div>
+                </div>
+
+                <div style={styles.cardFooter}>
+                  <span style={styles.monoText}>{item.dueDate || 'No Date'}</span>
+                  <span style={{
+                    ...styles.statusTag,
+                    backgroundColor: 
+                      item.paymentStatus === 'Paid' ? '#eef2f7' : 
+                      item.paymentStatus === 'Overdue' ? '#fee2e2' : 
+                      'var(--color-highlight)',
+                    color: 
+                      item.paymentStatus === 'Paid' ? 'var(--color-primary)' : 
+                      item.paymentStatus === 'Overdue' ? '#ef4444' : 
+                      '#cda250'
+                  }}>
+                    {item.paymentStatus.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Summary Mini Box */}
       <div style={styles.summaryBox}>
@@ -434,6 +322,111 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
           </span>
         </div>
       </div>
+
+      {/* Editor Modal */}
+      {(isAdding || editingItem) && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>{isAdding ? 'ADD BUDGET ITEM' : 'EDIT BUDGET ITEM'}</h3>
+              <button style={styles.closeBtn} onClick={closeModal}>
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={saveItem} style={styles.form}>
+              <div style={styles.formGrid}>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>CATEGORY</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Catering, Venue"
+                    value={formState.category || ''}
+                    onChange={(e) => handleFormChange('category', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+                
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>VENDOR NAME</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Grand Plaza"
+                    value={formState.vendorName || ''}
+                    onChange={(e) => handleFormChange('vendorName', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>ESTIMATED COST ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formState.estimatedCost || ''}
+                    onChange={(e) => handleFormChange('estimatedCost', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>ACTUAL COST ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formState.actualCost || ''}
+                    onChange={(e) => handleFormChange('actualCost', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>AMOUNT PAID ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={formState.amountPaid || ''}
+                    onChange={(e) => handleFormChange('amountPaid', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>DUE DATE</label>
+                  <input
+                    type="date"
+                    value={formState.dueDate || ''}
+                    onChange={(e) => handleFormChange('dueDate', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={{...styles.fieldGroup, gridColumn: 'span 2'}}>
+                  <label style={styles.label}>PAYMENT STATUS</label>
+                  <select
+                    value={formState.paymentStatus || 'Pending'}
+                    onChange={(e) => handleFormChange('paymentStatus', e.target.value)}
+                    style={styles.select}
+                  >
+                    <option value="Paid">Paid</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Overdue">Overdue</option>
+                  </select>
+                </div>
+              </div>
+              <div style={styles.formActions}>
+                <button type="button" style={styles.cancelBtn} onClick={closeModal}>
+                  CANCEL
+                </button>
+                <button type="submit" style={styles.saveBtn} disabled={isSyncing}>
+                  {isSyncing ? 'SAVING...' : 'SAVE ITEM'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -451,6 +444,26 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: '1px solid var(--color-muted)',
     paddingBottom: '0.75rem',
   },
+  headerActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  viewToggle: {
+    display: 'flex',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    overflow: 'hidden',
+  },
+  toggleBtn: {
+    border: 'none',
+    padding: '0.375rem 0.5rem',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: {
     fontFamily: 'var(--font-serif)',
     fontSize: '1.5rem',
@@ -461,7 +474,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     fontWeight: 600,
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     padding: '0.5rem 0.75rem',
@@ -469,61 +482,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'inline-flex',
     alignItems: 'center',
     transition: 'var(--transition-smooth)',
-  },
-  addPanel: {
-    backgroundColor: 'var(--color-bg)',
-    border: '1px solid var(--color-primary)',
-    borderRadius: 'var(--border-radius-md)',
-    padding: '1.25rem',
-    boxShadow: 'var(--box-shadow-subtle)',
-  },
-  panelTitle: {
-    fontFamily: 'var(--font-serif)',
-    fontSize: '1rem',
-    marginBottom: '0.75rem',
-    color: 'var(--color-primary)',
-    letterSpacing: '0.02em',
-  },
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: '0.75rem',
-  },
-  fieldGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.25rem',
-  },
-  label: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.625rem',
-    fontWeight: 600,
-    color: 'var(--color-muted)',
-  },
-  input: {
-    padding: '0.375rem 0.5rem',
-    border: '1px solid var(--color-muted)',
-    borderRadius: 'var(--border-radius-sm)',
-    fontSize: '0.8rem',
-  },
-  select: {
-    padding: '0.375rem 0.5rem',
-    border: '1px solid var(--color-muted)',
-    borderRadius: 'var(--border-radius-sm)',
-    fontSize: '0.8rem',
-  },
-  saveSubmitBtn: {
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.75rem',
-    fontWeight: 600,
-    padding: '0.5rem',
-    backgroundColor: 'var(--color-primary)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 'var(--border-radius-sm)',
-    cursor: 'pointer',
-    textAlign: 'center',
-    width: '100%',
   },
   tableWrapper: {
     overflowX: 'auto',
@@ -559,20 +517,6 @@ const styles: Record<string, React.CSSProperties> = {
   td: {
     padding: '0.75rem',
     verticalAlign: 'middle',
-  },
-  tableInput: {
-    padding: '0.25rem 0.375rem',
-    border: '1px solid var(--color-primary)',
-    borderRadius: 'var(--border-radius-sm)',
-    fontSize: '0.8rem',
-    width: '100%',
-  },
-  tableSelect: {
-    padding: '0.25rem',
-    border: '1px solid var(--color-primary)',
-    borderRadius: 'var(--border-radius-sm)',
-    fontSize: '0.8rem',
-    width: '100%',
   },
   categoryCell: {
     fontWeight: 600,
@@ -631,5 +575,188 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '1.25rem',
     fontWeight: 700,
     color: 'var(--color-primary)',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(13, 27, 42, 0.4)',
+    backdropFilter: 'blur(2px)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    padding: '1rem',
+  },
+  modalContent: {
+    backgroundColor: 'var(--color-bg)',
+    border: '2px solid var(--color-primary)',
+    borderRadius: 'var(--border-radius-lg)',
+    width: '100%',
+    maxWidth: '500px',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    backgroundColor: 'var(--color-primary)',
+    color: 'var(--color-on-primary)',
+    padding: '1rem 1.25rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.15rem',
+    color: 'var(--color-on-primary)',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--color-on-primary)',
+    cursor: 'pointer',
+  },
+  form: {
+    padding: '1.25rem',
+  },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '0.875rem',
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  },
+  label: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    color: 'var(--color-muted)',
+  },
+  input: {
+    padding: '0.5rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.85rem',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  select: {
+    padding: '0.5rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.85rem',
+    width: '100%',
+    boxSizing: 'border-box',
+  },
+  formActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '0.75rem',
+    marginTop: '1.25rem',
+    borderTop: '1px solid var(--color-muted)',
+    paddingTop: '1rem',
+  },
+  cancelBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 1rem',
+    backgroundColor: 'transparent',
+    color: 'var(--color-muted)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+  },
+  saveBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    padding: '0.5rem 1rem',
+    backgroundColor: 'var(--color-primary)',
+    color: 'var(--color-on-primary)',
+    border: 'none',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+  },
+  cardGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+    gap: '1rem',
+  },
+  card: {
+    backgroundColor: 'var(--color-bg)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '1rem',
+    boxShadow: 'var(--box-shadow-subtle)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+  },
+  totalCard: {
+    backgroundColor: 'var(--color-primary)',
+    borderColor: 'var(--color-primary)',
+    color: 'var(--color-on-primary)',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardMeta: {
+    display: 'flex',
+  },
+  cardActions: {
+    display: 'flex',
+    gap: '0.25rem',
+  },
+  cardCategory: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    color: 'var(--color-muted)',
+    letterSpacing: '0.05em',
+  },
+  cardTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+  },
+  cardBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.85rem',
+    color: 'var(--color-text)',
+  },
+  cardRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardLabel: {
+    color: 'var(--color-muted)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+  },
+  cardValue: {
+    fontWeight: 600,
+  },
+  cardFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTop: '1px dotted var(--color-muted)',
+    marginTop: '0.5rem',
+    paddingTop: '0.5rem',
+    fontSize: '0.75rem',
+    fontFamily: 'var(--font-mono)',
+    color: 'var(--color-muted)',
   }
 };

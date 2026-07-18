@@ -257,7 +257,7 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
       </div>
 
       {/* Desktop side-by-side Columns */}
-      <div style={styles.boardGrid}>
+      <div style={styles.boardGrid} className="kanban-grid">
         {stages.map(stage => {
           const stageTasks = tasks.filter(t => t.kanbanStage === stage);
           const isMobileVisible = activeMobileStage === stage;
@@ -369,6 +369,11 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
           .mobile-visible {
             display: flex !important;
           }
+          .kanban-grid {
+            grid-template-columns: 1fr !important;
+            width: 85%;
+            margin: 0 auto;
+          }
         }
       `}</style>
     </div>
@@ -398,7 +403,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     fontWeight: 600,
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     padding: '0.5rem 0.75rem',
@@ -583,7 +588,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modalHeader: {
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     padding: '1rem 1.25rem',
     display: 'flex',
     justifyContent: 'space-between',
@@ -592,12 +597,12 @@ const styles: Record<string, React.CSSProperties> = {
   modalTitle: {
     fontFamily: 'var(--font-serif)',
     fontSize: '1.15rem',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
   },
   closeBtn: {
     background: 'none',
     border: 'none',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     cursor: 'pointer',
   },
   form: {
@@ -651,7 +656,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     padding: '0.5rem 1rem',
     backgroundColor: '#ef4444',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     cursor: 'pointer',
@@ -673,7 +678,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     padding: '0.5rem 1rem',
     backgroundColor: 'var(--color-primary)',
-    color: '#fff',
+    color: 'var(--color-on-primary)',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     cursor: 'pointer',

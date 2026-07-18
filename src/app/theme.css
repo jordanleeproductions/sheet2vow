@@ -2,6 +2,7 @@
   /* Color Palette */
   --color-bg: #ffffff; /* Stark White Canvas */
   --color-primary: #0d1b2a; /* Corporate Navy */
+  --color-on-primary: #ffffff; /* Text on primary background */
   --color-text: #2f3e46; /* Deep Slate (dark readable text) */
   --color-muted: #708090; /* Soft Slate Gray (borders, secondary text, gridlines) */
   --color-highlight: #f7e7ce; /* Polished Champagne Gold */
@@ -20,4 +21,17 @@
   --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --box-shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
   --box-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme='dark'] {
+  --color-bg: #121212;
+  --color-primary: #f5f5f5;
+  --color-on-primary: #121212; /* Text on primary background */
+  --color-text: #e0e0e0;
+  --color-muted: #9ca3af; /* Lighter gray for better visibility */
+  --color-highlight: #332940;
+  --color-gold-dark: #ffb74d;
+  --color-white: #ffffff;
+  --box-shadow-subtle: 0 1px 3px rgba(255, 255, 255, 0.05), 0 1px 2px rgba(255, 255, 255, 0.1);
+  --box-shadow-hover: 0 4px 6px -1px rgba(255, 255, 255, 0.05), 0 2px 4px -1px rgba(255, 255, 255, 0.05);
 }
