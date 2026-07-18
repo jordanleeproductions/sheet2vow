@@ -8,6 +8,7 @@ import BudgetLedgerManager from '@/components/BudgetLedgerManager';
 import TimelineManager from '@/components/TimelineManager';
 import KanbanBoard from '@/components/KanbanBoard';
 import VendorManager from '@/components/VendorManager';
+import MusicManager from '@/components/MusicManager';
 import { RefreshCw, HardDrive, Heart, Sparkles, AlertCircle, FileSpreadsheet, Settings } from 'lucide-react';
 
 export default function Sheet2VowDashboard() {
@@ -32,7 +33,7 @@ export default function Sheet2VowDashboard() {
   const [syncError, setSyncError] = useState<string | null>(null);
   
   // Navigation
-  const [activeTab, setActiveTab] = useState<'metrics' | 'guests' | 'budget' | 'schedule' | 'tasks' | 'vendors'>('metrics');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'guests' | 'budget' | 'schedule' | 'tasks' | 'vendors' | 'music'>('metrics');
 
   // Load configuration from local storage on mount
   useEffect(() => {
@@ -157,7 +158,7 @@ export default function Sheet2VowDashboard() {
   };
 
   // Sync / Update specific sheet category back to Google Sheets
-  const syncUpdate = async (sheetType: 'guests' | 'budget' | 'schedule' | 'tasks', updatedData: any) => {
+  const syncUpdate = async (sheetType: 'guests' | 'budget' | 'schedule' | 'tasks' | 'music', updatedData: any) => {
     if (isSyncing || !spreadsheetId) return;
     setIsSyncing(true);
     setSyncError(null);
@@ -463,6 +464,7 @@ export default function Sheet2VowDashboard() {
               { id: 'schedule', label: '[ TIMELINE ]' },
               { id: 'vendors', label: '[ VENDORS ]' },
               { id: 'tasks', label: '[ KANBAN CHECKLIST ]' },
+              { id: 'music', label: '[ MUSIC ]' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -527,6 +529,14 @@ export default function Sheet2VowDashboard() {
                 <KanbanBoard
                   tasks={weddingData.tasks}
                   onUpdate={(data) => syncUpdate('tasks', data)}
+                  isSyncing={isSyncing}
+                />
+              )}
+
+              {activeTab === 'music' && weddingData && (
+                <MusicManager
+                  music={weddingData.music || []}
+                  onUpdate={(data) => syncUpdate('music', data)}
                   isSyncing={isSyncing}
                 />
               )}

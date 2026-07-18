@@ -58,6 +58,13 @@ let mockDatabase: WeddingData = {
     { taskId: 'T6', taskName: 'Book Wedding Night Suite', kanbanStage: 'Done', category: 'Venue', priority: 'Low', assignedTo: 'John', dueDate: '2026-06-01', notes: 'Booked at Plaza Suite. Late checkout confirmed.' },
     { taskId: 'T7', taskName: 'Write Wedding Vows', kanbanStage: 'To Do', category: 'Personal', priority: 'Medium', assignedTo: 'John & Sarah', dueDate: '2026-09-01', notes: 'Write in personal vows notebooks.' },
     { taskId: 'T8', taskName: 'Confirm Song Lists with DJ', kanbanStage: 'To Do', category: 'Music', priority: 'Low', assignedTo: 'John', dueDate: '2026-09-05', notes: 'Submit do-not-play list.' },
+  ],
+  music: [
+    { songId: 'M1', title: 'Perfect', artist: 'Ed Sheeran', listType: 'Special Moment', link: 'https://open.spotify.com/track/0tgVpDi06FyKpA1z0VMD4v', notes: 'First Dance' },
+    { songId: 'M2', title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', listType: 'Play List', link: 'https://open.spotify.com/track/32OlwWuMpZ6b0aN2RZOeMS', notes: 'Get people on the dance floor' },
+    { songId: 'M3', title: 'Macarena', artist: 'Los Del Rio', listType: 'Do Not Play', link: '', notes: 'Absolutely NO' },
+    { songId: 'M4', title: 'September', artist: 'Earth, Wind & Fire', listType: 'Play List', link: 'https://open.spotify.com/track/2tJulUYLDKOg9XrtVkMgcJ', notes: 'Classic' },
+    { songId: 'M5', title: 'Chicken Dance', artist: 'The Emeralds', listType: 'Do Not Play', link: '', notes: 'Never play this' },
   ]
 };
 
@@ -69,7 +76,8 @@ const HEADERS_MAP = {
   budget: ['Item ID', 'Category', 'Vendor Name', 'Estimated Cost', 'Actual Cost', 'Amount Paid', 'Due Date', 'Payment Status'],
   schedule: ['Start Time', 'End Time', 'Event Moment', 'Location', 'Responsibility / Vendors', 'Notes / Details'],
   vendors: ['Vendor ID', 'Vendor Name', 'Category', 'Contact Name', 'Email Address', 'Phone Number', 'Total Contract Value', 'Deposit Paid', 'Balance Owing', 'Payment Due Date', 'Contract Link', 'Staff Meals Required'],
-  tasks: ['Task ID', 'Task Name', 'Kanban Stage', 'Category', 'Priority', 'Assigned To', 'Due Date', 'Notes / Links']
+  tasks: ['Task ID', 'Task Name', 'Kanban Stage', 'Category', 'Priority', 'Assigned To', 'Due Date', 'Notes / Links'],
+  music: ['Song ID', 'Title', 'Artist', 'List Type', 'Link', 'Notes']
 };
 
 export async function GET(req: Request) {

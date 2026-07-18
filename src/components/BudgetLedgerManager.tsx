@@ -12,7 +12,7 @@ interface BudgetLedgerManagerProps {
 
 export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: BudgetLedgerManagerProps) {
   // View mode state
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
 
   // Form Modal state
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);

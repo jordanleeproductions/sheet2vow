@@ -1,6 +1,7 @@
 export type AgeCategory = 'Adult' | 'Youth' | 'Child' | 'Infant' | 'Vendor';
 export type RSVPStatus = 'No Response' | 'Attending' | 'Declined';
 export type KanbanStage = 'To Do' | 'In Progress' | 'Done';
+export type SongListType = 'Play List' | 'Do Not Play' | 'Special Moment' | 'General';
 
 export interface DashboardSummary {
   totalBudget: number;
@@ -69,6 +70,15 @@ export interface Task {
   notes: string; // From "Notes / Links"
 }
 
+export interface Song {
+  songId: string;
+  title: string;
+  artist: string;
+  listType: SongListType;
+  link: string;
+  notes: string;
+}
+
 export interface WeddingData {
   dashboard: DashboardSummary;
   guests: Guest[];
@@ -76,4 +86,5 @@ export interface WeddingData {
   schedule: ScheduleEvent[];
   vendors: Vendor[];
   tasks: Task[];
+  music: Song[];
 }
