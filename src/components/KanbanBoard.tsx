@@ -1,0 +1,681 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Task, KanbanStage } from '@/lib/sheets/types';
+import { Plus, Edit2, ArrowRight, ArrowLeft, Trash2, Calendar, User, X } from 'lucide-react';
+
+interface KanbanBoardProps {
+  tasks: Task[];
+  onUpdate: (updatedTasks: Task[]) => Promise<void>;
+  isSyncing: boolean;
+}
+
+export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardProps) {
+  // Mobile Column Selector
+  const [activeMobileStage, setActiveMobileStage] = useState<KanbanStage>('To Do');
+  
+  // Adding & Editing states
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [formState, setFormState] = useState<Partial<Task>>({});
+
+  const stages: KanbanStage[] = ['To Do', 'In Progress', 'Done'];
+
+  // Handle stage change
+  const moveTask = async (task: Task, direction: 'forward' | 'backward') => {
+    if (isSyncing) return;
+    
+    let newStage: KanbanStage = task.kanbanStage;
+    if (task.kanbanStage === 'To Do' && direction === 'forward') {
+      newStage = 'In Progress';
+    } else if (task.kanbanStage === 'In Progress') {
+      newStage = direction === 'forward' ? 'Done' : 'To Do';
+    } else if (task.kanbanStage === 'Done' && direction === 'backward') {
+      newStage = 'In Progress';
+    }
+
+    if (newStage !== task.kanbanStage) {
+      const updated = tasks.map(t => 
+        t.taskId === task.taskId ? { ...t, kanbanStage: newStage } : t
+      );
+      await onUpdate(updated);
+    }
+  };
+
+  const startEdit = (task: Task) => {
+    setEditingTask(task);
+    setFormState(task);
+    setIsAdding(false);
+  };
+
+  const startAdd = (stage: KanbanStage) => {
+    setFormState({
+      taskId: `T${tasks.length + 1}`,
+      taskName: '',
+      kanbanStage: stage,
+      category: '',
+      priority: 'Medium',
+      assignedTo: '',
+      dueDate: '',
+      notes: '',
+    });
+    setIsAdding(true);
+    setEditingTask(null);
+  };
+
+  const handleInputChange = (field: keyof Task, value: string) => {
+    setFormState(prev => ({ ...prev, [field]: value }));
+  };
+
+  const saveTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isSyncing) return;
+
+    let updated: Task[];
+    if (isAdding) {
+      updated = [...tasks, formState as Task];
+    } else {
+      updated = tasks.map(t => 
+        t.taskId === editingTask?.taskId ? (formState as Task) : t
+      );
+    }
+
+    await onUpdate(updated);
+    setIsAdding(false);
+    setEditingTask(null);
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (isSyncing || !confirm('Delete this task?')) return;
+    const updated = tasks.filter(t => t.taskId !== taskId);
+    await onUpdate(updated);
+    setIsAdding(false);
+    setEditingTask(null);
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'high': return { bg: '#fee2e2', text: '#ef4444' };
+      case 'medium': return { bg: 'var(--color-highlight)', text: '#cda250' };
+      default: return { bg: '#f1f1f1', text: 'var(--color-muted)' };
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      {/* Header */}
+      <div style={styles.header}>
+        <h2 style={styles.title}>Kanban Checklist</h2>
+        <button style={styles.addButton} onClick={() => startAdd('To Do')} disabled={isSyncing}>
+          <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD TASK
+        </button>
+      </div>
+
+      {/* Editor Modal */}
+      {(isAdding || editingTask) && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <div style={styles.modalHeader}>
+              <h3 style={styles.modalTitle}>
+                {isAdding ? 'ADD TASK' : 'EDIT TASK'}
+              </h3>
+              <button style={styles.closeBtn} onClick={() => { setIsAdding(false); setEditingTask(null); }}>
+                <X size={18} />
+              </button>
+            </div>
+            
+            <form onSubmit={saveTask} style={styles.form}>
+              <div style={styles.formGrid}>
+                <div style={{ ...styles.fieldGroup, gridColumn: 'span 2' }}>
+                  <label style={styles.label}>TASK NAME *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Call Florist to confirm delivery"
+                    value={formState.taskName || ''}
+                    onChange={(e) => handleInputChange('taskName', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>KANBAN STAGE</label>
+                  <select
+                    value={formState.kanbanStage || 'To Do'}
+                    onChange={(e) => handleInputChange('kanbanStage', e.target.value as KanbanStage)}
+                    style={styles.select}
+                  >
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                  </select>
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>PRIORITY</label>
+                  <select
+                    value={formState.priority || 'Medium'}
+                    onChange={(e) => handleInputChange('priority', e.target.value)}
+                    style={styles.select}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>CATEGORY</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Florals, Attire"
+                    value={formState.category || ''}
+                    onChange={(e) => handleInputChange('category', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>ASSIGNED TO</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. John"
+                    value={formState.assignedTo || ''}
+                    onChange={(e) => handleInputChange('assignedTo', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>DUE DATE</label>
+                  <input
+                    type="date"
+                    value={formState.dueDate || ''}
+                    onChange={(e) => handleInputChange('dueDate', e.target.value)}
+                    style={styles.input}
+                  />
+                </div>
+
+                <div style={{ ...styles.fieldGroup, gridColumn: 'span 2' }}>
+                  <label style={styles.label}>NOTES / LINKS</label>
+                  <textarea
+                    placeholder="Task details, links, or sub-checklist..."
+                    value={formState.notes || ''}
+                    rows={3}
+                    onChange={(e) => handleInputChange('notes', e.target.value)}
+                    style={styles.textarea}
+                  />
+                </div>
+              </div>
+
+              <div style={styles.formActions}>
+                {!isAdding && editingTask && (
+                  <button 
+                    type="button" 
+                    style={styles.deleteBtn}
+                    onClick={() => deleteTask(editingTask.taskId)}
+                  >
+                    DELETE
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  style={styles.cancelBtn} 
+                  onClick={() => { setIsAdding(false); setEditingTask(null); }}
+                >
+                  CANCEL
+                </button>
+                <button type="submit" style={styles.saveBtn} disabled={isSyncing}>
+                  {isSyncing ? 'SAVING...' : 'SAVE TASK'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Tab Swapper */}
+      <div style={styles.mobileTabs}>
+        {stages.map(stage => {
+          const count = tasks.filter(t => t.kanbanStage === stage).length;
+          const isActive = activeMobileStage === stage;
+          return (
+            <button
+              key={stage}
+              onClick={() => setActiveMobileStage(stage)}
+              style={{
+                ...styles.mobileTabButton,
+                borderBottomColor: isActive ? 'var(--color-primary)' : 'transparent',
+                fontWeight: isActive ? 700 : 400,
+                color: isActive ? 'var(--color-primary)' : 'var(--color-muted)'
+              }}
+            >
+              {stage.toUpperCase()} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Desktop side-by-side Columns */}
+      <div style={styles.boardGrid}>
+        {stages.map(stage => {
+          const stageTasks = tasks.filter(t => t.kanbanStage === stage);
+          const isMobileVisible = activeMobileStage === stage;
+          
+          return (
+            <div 
+              key={stage} 
+              style={{
+                ...styles.column,
+                // Hide inactive columns on mobile
+                display: 'flex',
+                // Keep showing all on desktop through media queries (handled by setting style class or inline conditionals)
+              }}
+              className={`kanban-column ${isMobileVisible ? 'mobile-visible' : 'mobile-hidden'}`}
+            >
+              {/* Column Header */}
+              <div style={styles.columnHeader}>
+                <h3 style={styles.columnTitle}>
+                  {stage.toUpperCase()} 
+                  <span style={styles.columnCount}>{stageTasks.length}</span>
+                </h3>
+              </div>
+
+              {/* Tasks List */}
+              <div style={styles.taskList}>
+                {stageTasks.length === 0 ? (
+                  <div style={styles.emptyState}>No tasks here.</div>
+                ) : (
+                  stageTasks.map(task => {
+                    const priColors = getPriorityColor(task.priority);
+                    return (
+                      <div key={task.taskId} style={styles.taskCard}>
+                        <div style={styles.cardHeader}>
+                          <span style={styles.categoryBadge}>{task.category.toUpperCase() || 'GENERAL'}</span>
+                          <span style={{ 
+                            ...styles.priorityBadge, 
+                            backgroundColor: priColors.bg, 
+                            color: priColors.text 
+                          }}>
+                            {task.priority.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        <h4 style={styles.taskName}>{task.taskName}</h4>
+
+                        {task.notes && <p style={styles.taskNotes}>{task.notes}</p>}
+
+                        <div style={styles.cardFooter}>
+                          <div style={styles.metaRow}>
+                            {task.assignedTo && (
+                              <div style={styles.metaItem}>
+                                <User size={12} style={styles.icon} />
+                                <span>{task.assignedTo}</span>
+                              </div>
+                            )}
+                            {task.dueDate && (
+                              <div style={styles.metaItem}>
+                                <Calendar size={12} style={styles.icon} />
+                                <span>{task.dueDate}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Quick movement controls */}
+                          <div style={styles.quickMoves}>
+                            <button 
+                              style={styles.cardActionBtn}
+                              onClick={() => startEdit(task)}
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            
+                            {stage !== 'To Do' && (
+                              <button 
+                                style={styles.cardActionBtn}
+                                onClick={() => moveTask(task, 'backward')}
+                                title="Move back"
+                              >
+                                <ArrowLeft size={12} />
+                              </button>
+                            )}
+                            {stage !== 'Done' && (
+                              <button 
+                                style={styles.cardActionBtn}
+                                onClick={() => moveTask(task, 'forward')}
+                                title="Move forward"
+                              >
+                                <ArrowRight size={12} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* CSS details to ensure columns switch properly */}
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          .mobile-hidden {
+            display: none !important;
+          }
+          .mobile-visible {
+            display: flex !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--color-muted)',
+    paddingBottom: '0.75rem',
+  },
+  title: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.5rem',
+    color: 'var(--color-primary)',
+  },
+  addButton: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    backgroundColor: 'var(--color-primary)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.5rem 0.75rem',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'var(--transition-smooth)',
+  },
+  mobileTabs: {
+    display: 'flex',
+    borderBottom: '1px solid var(--color-muted)',
+    gap: '1rem',
+    paddingBottom: '2px',
+  },
+  mobileTabButton: {
+    flex: 1,
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    cursor: 'pointer',
+    textAlign: 'center',
+  },
+  boardGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '1.25rem',
+    marginTop: '0.5rem',
+  },
+  column: {
+    flexDirection: 'column',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 'var(--border-radius-lg)',
+    padding: '1rem',
+    border: '1px solid var(--color-muted)',
+    minHeight: '400px',
+  },
+  columnHeader: {
+    marginBottom: '1rem',
+    borderBottom: '1px solid var(--color-muted)',
+    paddingBottom: '0.5rem',
+  },
+  columnTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.15rem',
+    color: 'var(--color-primary)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  columnCount: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    backgroundColor: '#eef2f7',
+    color: 'var(--color-primary)',
+    padding: '0.125rem 0.5rem',
+    borderRadius: '10px',
+  },
+  taskList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+    overflowY: 'auto',
+    flex: 1,
+  },
+  taskCard: {
+    backgroundColor: 'var(--color-bg)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '0.875rem',
+    boxShadow: 'var(--box-shadow-subtle)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+    transition: 'var(--transition-smooth)',
+  },
+  cardHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.625rem',
+    fontWeight: 600,
+    backgroundColor: '#eef2f7',
+    color: 'var(--color-primary)',
+    padding: '0.125rem 0.375rem',
+    borderRadius: 'var(--border-radius-sm)',
+  },
+  priorityBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.625rem',
+    fontWeight: 600,
+    padding: '0.125rem 0.375rem',
+    borderRadius: 'var(--border-radius-sm)',
+  },
+  taskName: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1rem',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+  },
+  taskNotes: {
+    fontSize: '0.75rem',
+    color: 'var(--color-muted)',
+    lineHeight: '1.4',
+  },
+  cardFooter: {
+    marginTop: '0.25rem',
+    borderTop: '1px dotted #eeeeee',
+    paddingTop: '0.5rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  metaRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  },
+  metaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.25rem',
+    fontSize: '0.675rem',
+    color: 'var(--color-muted)',
+  },
+  icon: {
+    color: 'var(--color-muted)',
+    flexShrink: 0,
+  },
+  quickMoves: {
+    display: 'flex',
+    gap: '0.25rem',
+  },
+  cardActionBtn: {
+    background: 'none',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    color: 'var(--color-muted)',
+    cursor: 'pointer',
+    padding: '0.25rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'var(--transition-smooth)',
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: '1.5rem',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    color: 'var(--color-muted)',
+    border: '1px dashed var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(13, 27, 42, 0.4)',
+    backdropFilter: 'blur(2px)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    padding: '1rem',
+  },
+  modalContent: {
+    backgroundColor: 'var(--color-bg)',
+    border: '2px solid var(--color-primary)',
+    borderRadius: 'var(--border-radius-lg)',
+    width: '100%',
+    maxWidth: '500px',
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    backgroundColor: 'var(--color-primary)',
+    color: '#fff',
+    padding: '1rem 1.25rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.15rem',
+    color: '#fff',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    color: '#fff',
+    cursor: 'pointer',
+  },
+  form: {
+    padding: '1.25rem',
+  },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '0.875rem',
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  },
+  label: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    color: 'var(--color-muted)',
+  },
+  input: {
+    padding: '0.5rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.85rem',
+  },
+  select: {
+    padding: '0.5rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.85rem',
+  },
+  textarea: {
+    padding: '0.5rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.85rem',
+    fontFamily: 'var(--font-sans)',
+  },
+  formActions: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '0.75rem',
+    marginTop: '1.25rem',
+    borderTop: '1px solid var(--color-muted)',
+    paddingTop: '1rem',
+  },
+  deleteBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 1rem',
+    backgroundColor: '#ef4444',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+    marginRight: 'auto',
+  },
+  cancelBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 1rem',
+    backgroundColor: 'transparent',
+    color: 'var(--color-muted)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+  },
+  saveBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    padding: '0.5rem 1rem',
+    backgroundColor: 'var(--color-primary)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+  }
+};

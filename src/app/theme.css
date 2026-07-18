@@ -1,0 +1,23 @@
+:root {
+  /* Color Palette */
+  --color-bg: #ffffff; /* Stark White Canvas */
+  --color-primary: #0d1b2a; /* Corporate Navy */
+  --color-text: #2f3e46; /* Deep Slate (dark readable text) */
+  --color-muted: #708090; /* Soft Slate Gray (borders, secondary text, gridlines) */
+  --color-highlight: #f7e7ce; /* Polished Champagne Gold */
+  --color-gold-dark: #cda250; /* Darker Champagne for readable text/borders */
+  --color-white: #ffffff;
+
+  /* Fonts */
+  --font-mono: var(--font-mono-google), 'Roboto Mono', 'JetBrains Mono', 'SFMono-Regular', 'Courier New', monospace;
+  --font-serif: var(--font-serif-google), 'Playfair Display', 'Lora', 'Georgia', serif;
+  --font-sans: var(--font-sans-google), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* UI Styling Defaults */
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+  --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --box-shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+  --box-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+}

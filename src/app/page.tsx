@@ -1,0 +1,710 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { WeddingData, Guest, BudgetItem, ScheduleEvent, Task } from '@/lib/sheets/types';
+import DashboardMetrics from '@/components/DashboardMetrics';
+import GuestListManager from '@/components/GuestListManager';
+import BudgetLedgerManager from '@/components/BudgetLedgerManager';
+import TimelineManager from '@/components/TimelineManager';
+import KanbanBoard from '@/components/KanbanBoard';
+import { RefreshCw, HardDrive, Heart, Sparkles, AlertCircle, FileSpreadsheet } from 'lucide-react';
+
+export default function Sheet2VowDashboard() {
+  // Authentication & Spreadsheet Settings
+  const [spreadsheetId, setSpreadsheetId] = useState<string>('');
+  const [googleToken, setGoogleToken] = useState<string>('');
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(false);
+  const [isMockMode, setIsMockMode] = useState<boolean>(true);
+  const [weddingName, setWeddingName] = useState<string>('');
+  const [budgetThreshold, setBudgetThreshold] = useState<number>(35000);
+
+  // App Data & Loading states
+  const [weddingData, setWeddingData] = useState<WeddingData | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  
+  // Navigation
+  const [activeTab, setActiveTab] = useState<'metrics' | 'guests' | 'budget' | 'schedule' | 'tasks'>('metrics');
+
+  // Load configuration from local storage on mount
+  useEffect(() => {
+    const savedSheetId = localStorage.getItem('s2v_spreadsheet_id');
+    const savedToken = localStorage.getItem('s2v_google_token');
+    const savedOnboarded = localStorage.getItem('s2v_is_onboarded');
+    const savedMock = localStorage.getItem('s2v_is_mock');
+    const savedName = localStorage.getItem('s2v_wedding_name');
+
+    if (savedSheetId) setSpreadsheetId(savedSheetId);
+    if (savedToken) setGoogleToken(savedToken);
+    if (savedOnboarded === 'true') setIsOnboarded(true);
+    if (savedMock === 'false') setIsMockMode(false);
+    if (savedName) setWeddingName(savedName);
+  }, []);
+
+  // Fetch data whenever spreadsheetId changes or on refresh
+  useEffect(() => {
+    if (isOnboarded && spreadsheetId) {
+      fetchWeddingData();
+    }
+  }, [isOnboarded, spreadsheetId]);
+
+  const fetchWeddingData = async () => {
+    setIsLoading(true);
+    setSyncError(null);
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      const token = isMockMode ? 'mock-token' : googleToken;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`/api/sync?spreadsheetId=${spreadsheetId}`, {
+        method: 'GET',
+        headers
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        setWeddingData(res.data);
+        if (res.weddingName) {
+          setWeddingName(res.weddingName);
+        }
+      } else {
+        throw new Error(res.error || 'Failed to fetch spreadsheet data');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncError(err.message || 'Error connecting to Google Sheet. Check authentication.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Onboard flow (Atomic copy + config initialization)
+  const handleOnboard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setSyncError(null);
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      const token = isMockMode ? 'mock-token' : googleToken;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/onboard', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          weddingName,
+          budget: budgetThreshold
+        })
+      });
+
+      const res = await response.json();
+      if (res.success) {
+        setSpreadsheetId(res.spreadsheetId);
+        setIsOnboarded(true);
+        localStorage.setItem('s2v_spreadsheet_id', res.spreadsheetId);
+        localStorage.setItem('s2v_google_token', token);
+        localStorage.setItem('s2v_is_onboarded', 'true');
+        localStorage.setItem('s2v_is_mock', isMockMode ? 'true' : 'false');
+        localStorage.setItem('s2v_wedding_name', res.weddingName);
+      } else {
+        throw new Error(res.error || 'Onboarding failed');
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncError(err.message || 'Onboarding failed. Ensure Google Token is valid.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Sync / Update specific sheet category back to Google Sheets
+  const syncUpdate = async (sheetType: 'guests' | 'budget' | 'schedule' | 'tasks', updatedData: any) => {
+    if (isSyncing || !spreadsheetId) return;
+    setIsSyncing(true);
+    setSyncError(null);
+
+    // Optimistically update UI local state first
+    if (weddingData) {
+      setWeddingData({
+        ...weddingData,
+        [sheetType]: updatedData
+      });
+    }
+
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      const token = isMockMode ? 'mock-token' : googleToken;
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/sync', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          spreadsheetId,
+          sheetType,
+          data: updatedData
+        })
+      });
+
+      const res = await response.json();
+      if (!res.success) {
+        throw new Error(res.error || `Failed to sync ${sheetType}`);
+      }
+
+      // If backend returns updated data (in mock mode), update our state
+      if (res.data) {
+        setWeddingData(res.data);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setSyncError(`Sync error: ${err.message || 'Could not push updates.'}`);
+      // Re-fetch database to rollback client optimistic updates
+      fetchWeddingData();
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  // Disconnect sheet and reset local storage
+  const handleDisconnect = () => {
+    if (confirm('Disconnect from sheet? Local session will be cleared.')) {
+      setSpreadsheetId('');
+      setGoogleToken('');
+      setIsOnboarded(false);
+      setWeddingData(null);
+      localStorage.removeItem('s2v_spreadsheet_id');
+      localStorage.removeItem('s2v_google_token');
+      localStorage.removeItem('s2v_is_onboarded');
+      localStorage.removeItem('s2v_is_mock');
+      localStorage.removeItem('s2v_wedding_name');
+    }
+  };
+
+  return (
+    <div className="container" style={styles.container}>
+      {/* Brand Header */}
+      <header style={styles.appHeader}>
+        <div style={styles.brandGroup}>
+          <FileSpreadsheet style={styles.brandIcon} size={28} />
+          <div>
+            <h1 style={styles.brandName}>Sheet2Vow</h1>
+            <p style={styles.brandSubtitle}>Clean digital canvas for spreadsheet purists.</p>
+          </div>
+        </div>
+        
+        {isOnboarded && (
+          <button style={styles.disconnectBtn} onClick={handleDisconnect}>
+            DISCONNECT
+          </button>
+        )}
+      </header>
+
+      {/* Main Core Area */}
+      {!isOnboarded ? (
+        /* Onboarding Workspace */
+        <div style={styles.onboardWrapper}>
+          <div style={styles.onboardHero}>
+            <Heart size={36} style={{ color: 'var(--color-primary)', marginBottom: '1rem' }} />
+            <h2 style={styles.onboardTitle}>Welcome to Sheet2Vow</h2>
+            <p style={styles.onboardDesc}>
+              A high-end wedding planning interface that maps directly onto a single Google Sheet in your personal Google Drive. 
+              No databases, no proprietary tracking. Your sheet is your data.
+            </p>
+          </div>
+
+          <form onSubmit={handleOnboard} style={styles.onboardForm}>
+            {/* Mode Selectors */}
+            <div style={styles.modeTabs}>
+              <button
+                type="button"
+                onClick={() => setIsMockMode(true)}
+                style={{
+                  ...styles.modeTabBtn,
+                  backgroundColor: isMockMode ? 'var(--color-primary)' : 'transparent',
+                  color: isMockMode ? '#fff' : 'var(--color-muted)',
+                  border: `1px solid ${isMockMode ? 'var(--color-primary)' : 'var(--color-muted)'}`
+                }}
+              >
+                TEST IN MOCK MODE
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsMockMode(false)}
+                style={{
+                  ...styles.modeTabBtn,
+                  backgroundColor: !isMockMode ? 'var(--color-primary)' : 'transparent',
+                  color: !isMockMode ? '#fff' : 'var(--color-muted)',
+                  border: `1px solid ${!isMockMode ? 'var(--color-primary)' : 'var(--color-muted)'}`
+                }}
+              >
+                CONNECT GOOGLE DRIVE
+              </button>
+            </div>
+
+            {/* Google OAuth configuration if real client requested */}
+            {!isMockMode && (
+              <div style={styles.oauthSection}>
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>GOOGLE ACCOUNT OAUTH ACCESS TOKEN *</label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter your OAuth access_token..."
+                    value={googleToken}
+                    onChange={(e) => setGoogleToken(e.target.value)}
+                    style={styles.input}
+                  />
+                  <span style={styles.fieldInfo}>
+                    Requires scopes: <code>drive.file</code> and <code>spreadsheets</code>.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Wedding Initial Settings */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>WEDDING COUPLE / TITLE *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. Alex & Sam's Wedding"
+                value={weddingName}
+                onChange={(e) => setWeddingName(e.target.value)}
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>TOTAL BUDGET LIMIT ($) *</label>
+              <input
+                type="number"
+                required
+                min="1"
+                value={budgetThreshold}
+                onChange={(e) => setBudgetThreshold(Number(e.target.value))}
+                style={styles.input}
+              />
+            </div>
+
+            {syncError && (
+              <div style={styles.errorBox}>
+                <AlertCircle size={16} />
+                <span>{syncError}</span>
+              </div>
+            )}
+
+            <button type="submit" style={styles.submitBtn} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <RefreshCw style={styles.spin} size={16} /> INITIALIZING SPREADSHEET...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} style={{ marginRight: '0.5rem' }} /> 
+                  {isMockMode ? 'LAUNCH DEMO PLATFORM' : 'GENERATE PERSONAL WEDDING DRIVE FILE'}
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      ) : (
+        /* Logged In Dashboard View */
+        <div>
+          {/* Status Sub-Banner */}
+          <div style={styles.syncBanner}>
+            <div style={styles.syncStatus}>
+              {isMockMode ? (
+                <>
+                  <div style={{ ...styles.indicator, backgroundColor: '#cda250' }} />
+                  <span style={styles.syncText}>RUNNING IN MOCK MODE (NO WRITES TO DRIVE)</span>
+                </>
+              ) : (
+                <>
+                  <div style={{ ...styles.indicator, backgroundColor: '#10b981' }} />
+                  <span style={styles.syncText}>CONNECTED TO GOOGLE DRIVE: <code>{spreadsheetId.substring(0, 10)}...</code></span>
+                </>
+              )}
+            </div>
+
+            <div style={styles.syncActions}>
+              {isSyncing && <span style={styles.syncLoader}>SYNCING CELLS...</span>}
+              <button style={styles.refreshBtn} onClick={fetchWeddingData} disabled={isLoading}>
+                <RefreshCw size={14} className={isLoading ? 'spin' : ''} style={{ marginRight: '0.25rem' }} /> REFRESH
+              </button>
+            </div>
+          </div>
+
+          {syncError && (
+            <div style={{ ...styles.errorBox, marginBottom: '1rem' }}>
+              <AlertCircle size={16} />
+              <span>{syncError}</span>
+            </div>
+          )}
+
+          {/* Target Wedding Milestone Header */}
+          <div style={styles.weddingTitleHeader}>
+            <h2 style={styles.weddingNameText}>{weddingName.toUpperCase()}</h2>
+            <div style={styles.weddingMilestoneDate}>OCTOBER 15, 2026 • SINGLE-TENANT DATA MODEL</div>
+          </div>
+
+          {/* Navigation tabs */}
+          <nav style={styles.navbar}>
+            {[
+              { id: 'metrics', label: '[ SUMMARY ]' },
+              { id: 'guests', label: '[ GUEST LIST ]' },
+              { id: 'budget', label: '[ LEDGER ]' },
+              { id: 'schedule', label: '[ TIMELINE ]' },
+              { id: 'tasks', label: '[ KANBAN CHECKLIST ]' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                style={{
+                  ...styles.navTabBtn,
+                  color: activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-muted)',
+                  fontWeight: activeTab === tab.id ? 700 : 400,
+                  borderBottomColor: activeTab === tab.id ? 'var(--color-primary)' : 'transparent'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
+          {/* View Router */}
+          {isLoading ? (
+            <div style={styles.mainLoader}>
+              <RefreshCw className="spin" size={32} style={styles.spinIcon} />
+              <p style={styles.loadingText}>Fetching spreadsheet structures...</p>
+            </div>
+          ) : (
+            <div style={styles.tabContent}>
+              {activeTab === 'metrics' && weddingData && (
+                <DashboardMetrics metrics={weddingData.dashboard} />
+              )}
+
+              {activeTab === 'guests' && weddingData && (
+                <GuestListManager 
+                  guests={weddingData.guests} 
+                  onUpdate={(data) => syncUpdate('guests', data)}
+                  isSyncing={isSyncing}
+                />
+              )}
+
+              {activeTab === 'budget' && weddingData && (
+                <BudgetLedgerManager
+                  budget={weddingData.budget}
+                  onUpdate={(data) => syncUpdate('budget', data)}
+                  isSyncing={isSyncing}
+                />
+              )}
+
+              {activeTab === 'schedule' && weddingData && (
+                <TimelineManager
+                  schedule={weddingData.schedule}
+                  onUpdate={(data) => syncUpdate('schedule', data)}
+                  isSyncing={isSyncing}
+                />
+              )}
+
+              {activeTab === 'tasks' && weddingData && (
+                <KanbanBoard
+                  tasks={weddingData.tasks}
+                  onUpdate={(data) => syncUpdate('tasks', data)}
+                  isSyncing={isSyncing}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Global Spinner Styling helper */}
+      <style jsx global>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .spin {
+          animation: spin 1.5s linear infinite;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  container: {
+    paddingBottom: '4rem',
+  },
+  appHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '2px solid var(--color-primary)',
+    paddingBottom: '1rem',
+    marginBottom: '1.5rem',
+  },
+  brandGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  brandIcon: {
+    color: 'var(--color-primary)',
+  },
+  brandName: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.75rem',
+    color: 'var(--color-primary)',
+    lineHeight: '1.1',
+  },
+  brandSubtitle: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    color: 'var(--color-muted)',
+    letterSpacing: '0.02em',
+  },
+  disconnectBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    backgroundColor: 'transparent',
+    color: 'var(--color-muted)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.375rem 0.625rem',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  onboardWrapper: {
+    backgroundColor: 'var(--color-bg)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-lg)',
+    padding: '2rem',
+    boxShadow: 'var(--box-shadow-subtle)',
+    maxWidth: '500px',
+    margin: '2rem auto',
+  },
+  onboardHero: {
+    textAlign: 'center',
+    marginBottom: '2rem',
+  },
+  onboardTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.75rem',
+    marginBottom: '0.5rem',
+    color: 'var(--color-primary)',
+  },
+  onboardDesc: {
+    fontSize: '0.85rem',
+    color: 'var(--color-muted)',
+    lineHeight: '1.5',
+  },
+  onboardForm: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.25rem',
+  },
+  modeTabs: {
+    display: 'flex',
+    gap: '0.5rem',
+    marginBottom: '0.5rem',
+  },
+  modeTabBtn: {
+    flex: 1,
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    padding: '0.625rem 0.25rem',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  oauthSection: {
+    backgroundColor: '#f8f9fa',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.75rem',
+  },
+  fieldGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  },
+  label: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    color: 'var(--color-muted)',
+  },
+  input: {
+    padding: '0.625rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.875rem',
+  },
+  fieldInfo: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    color: 'var(--color-muted)',
+    marginTop: '0.25rem',
+  },
+  submitBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.825rem',
+    fontWeight: 700,
+    backgroundColor: 'var(--color-primary)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.875rem',
+    cursor: 'pointer',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    transition: 'var(--transition-smooth)',
+    marginTop: '0.5rem',
+  },
+  spin: {
+    animation: 'spin 1.5s linear infinite',
+    marginRight: '0.5rem',
+  },
+  syncBanner: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '0.5rem 0.75rem',
+    marginBottom: '1.5rem',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+  },
+  syncStatus: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  indicator: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+  },
+  syncText: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    color: 'var(--color-text)',
+  },
+  syncActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  syncLoader: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    color: 'var(--color-primary)',
+    fontWeight: 600,
+  },
+  refreshBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    backgroundColor: 'transparent',
+    color: 'var(--color-text)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.25rem 0.5rem',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  weddingTitleHeader: {
+    textAlign: 'center',
+    marginBottom: '2rem',
+  },
+  weddingNameText: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '2rem',
+    color: 'var(--color-primary)',
+    fontWeight: 600,
+    letterSpacing: '0.02em',
+    marginBottom: '0.25rem',
+  },
+  weddingMilestoneDate: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    color: 'var(--color-muted)',
+    letterSpacing: '0.1em',
+  },
+  navbar: {
+    display: 'flex',
+    overflowX: 'auto',
+    borderBottom: '1px solid var(--color-primary)',
+    gap: '1rem',
+    marginBottom: '2rem',
+    paddingBottom: '2px',
+    whiteSpace: 'nowrap',
+    scrollbarWidth: 'none', // for firefox
+  },
+  navTabBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.725rem',
+    padding: '0.5rem 0',
+    backgroundColor: 'transparent',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  mainLoader: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '4rem 0',
+    gap: '1rem',
+  },
+  spinIcon: {
+    color: 'var(--color-primary)',
+    animation: 'spin 1.5s linear infinite',
+  },
+  loadingText: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.8rem',
+    color: 'var(--color-muted)',
+  },
+  tabContent: {
+    animation: 'fadeIn 0.3s ease-in-out',
+  },
+  errorBox: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    backgroundColor: '#fee2e2',
+    border: '1px solid #ef4444',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.75rem',
+    color: '#ef4444',
+    fontSize: '0.75rem',
+    fontFamily: 'var(--font-sans)',
+  }
+};
