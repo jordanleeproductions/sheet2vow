@@ -180,25 +180,29 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
               <h3 style={styles.cardName}>{guest.firstName} {guest.lastName}</h3>
 
               <div style={styles.cardDetails}>
-                {guest.emailAddress && (
-                  <div style={styles.detailItem}>
-                    <Mail size={12} style={styles.icon} />
-                    <span>{guest.emailAddress}</span>
-                  </div>
-                )}
-                {guest.phoneNumber && (
-                  <div style={styles.detailItem}>
-                    <Phone size={12} style={styles.icon} />
-                    <span>{guest.phoneNumber}</span>
-                  </div>
-                )}
-                <div style={styles.detailItem}>
-                  <Coffee size={12} style={styles.icon} />
-                  <span>Diet: {guest.dietaryRestrictions || 'None'}</span>
+                <div style={styles.detailColumn}>
+                  {guest.emailAddress && (
+                    <div style={styles.detailItem}>
+                      <Mail size={12} style={styles.icon} />
+                      <span>{guest.emailAddress}</span>
+                    </div>
+                  )}
+                  {guest.phoneNumber && (
+                    <div style={styles.detailItem}>
+                      <Phone size={12} style={styles.icon} />
+                      <span>{guest.phoneNumber}</span>
+                    </div>
+                  )}
                 </div>
-                <div style={styles.detailItem}>
-                  <Tag size={12} style={styles.icon} />
-                  <span>Table: {guest.tableAssignment || 'Unassigned'}</span>
+                <div style={styles.detailColumn}>
+                  <div style={styles.detailItem}>
+                    <Coffee size={12} style={styles.icon} />
+                    <span>Diet: {guest.dietaryRestrictions || 'None'}</span>
+                  </div>
+                  <div style={styles.detailItem}>
+                    <Tag size={12} style={styles.icon} />
+                    <span>Table: {guest.tableAssignment || 'Unassigned'}</span>
+                  </div>
                 </div>
               </div>
 
@@ -497,11 +501,17 @@ const styles: Record<string, React.CSSProperties> = {
   },
   cardDetails: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '0.375rem',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: '0.5rem',
     marginBottom: '1rem',
     fontSize: '0.8rem',
     color: 'var(--color-text)',
+  },
+  detailColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.375rem',
   },
   detailItem: {
     display: 'flex',

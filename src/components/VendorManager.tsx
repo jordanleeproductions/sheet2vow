@@ -524,6 +524,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'flex-start',
     padding: '1rem',
     borderBottom: '1px solid var(--color-muted)',
+    backgroundColor: '#0d1b2a14',
   },
   cardTitle: {
     margin: 0,
