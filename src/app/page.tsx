@@ -22,7 +22,7 @@ export default function Sheet2VowDashboard() {
   const [budgetThreshold, setBudgetThreshold] = useState<number>(35000);
 
   // Theme and Settings
-  const [theme, setTheme] = useState<'light'|'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [showSettings, setShowSettings] = useState<boolean>(false);
 
@@ -31,7 +31,7 @@ export default function Sheet2VowDashboard() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncError, setSyncError] = useState<string | null>(null);
-  
+
   // Navigation
   const [activeTab, setActiveTab] = useState<'metrics' | 'guests' | 'budget' | 'schedule' | 'tasks' | 'vendors' | 'music'>('metrics');
 
@@ -83,7 +83,7 @@ export default function Sheet2VowDashboard() {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       const token = isMockMode ? 'mock-token' : googleToken;
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -121,7 +121,7 @@ export default function Sheet2VowDashboard() {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       const token = isMockMode ? 'mock-token' : googleToken;
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -175,7 +175,7 @@ export default function Sheet2VowDashboard() {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      
+
       const token = isMockMode ? 'mock-token' : googleToken;
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -243,13 +243,13 @@ export default function Sheet2VowDashboard() {
       {/* Brand Header */}
       <header style={styles.appHeader}>
         <div style={styles.brandGroup}>
-          <FileSpreadsheet style={styles.brandIcon} size={28} />
+          <img src="/logo.png" alt="Sheet2Vow Logo" style={{ height: '50px', objectFit: 'contain' }} />
           <div>
             <h1 style={styles.brandName}>Sheet2Vow</h1>
             <p style={styles.brandSubtitle}>Clean digital canvas for spreadsheet purists.</p>
           </div>
         </div>
-        
+
         {isOnboarded && (
           <div style={{ position: 'relative' }}>
             <button style={styles.iconBtn} onClick={() => setShowSettings(!showSettings)}>
@@ -267,13 +267,13 @@ export default function Sheet2VowDashboard() {
                 <div style={styles.settingsSection}>
                   <label style={styles.settingsLabel}>PRIMARY COLOR</label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <input 
-                      type="color" 
-                      value={primaryColor || (theme === 'dark' ? '#f5f5f5' : '#0d1b2a')} 
+                    <input
+                      type="color"
+                      value={primaryColor || (theme === 'dark' ? '#f5f5f5' : '#0d1b2a')}
                       onChange={(e) => setPrimaryColor(e.target.value)}
                       style={{ padding: 0, border: 'none', width: '24px', height: '24px', cursor: 'pointer', background: 'transparent' }}
                     />
-                    <button 
+                    <button
                       onClick={() => setPrimaryColor('')}
                       style={{ fontFamily: 'var(--font-mono)', fontSize: '0.65rem', padding: '0.25rem 0.5rem', background: 'transparent', border: '1px solid var(--color-muted)', borderRadius: '4px', cursor: 'pointer', color: 'var(--color-text)' }}
                     >
@@ -304,7 +304,7 @@ export default function Sheet2VowDashboard() {
             <Heart size={36} style={{ color: 'var(--color-primary)', marginBottom: '1rem' }} />
             <h2 style={styles.onboardTitle}>Welcome to Sheet2Vow</h2>
             <p style={styles.onboardDesc}>
-              A high-end wedding planning interface that maps directly onto a single Google Sheet in your personal Google Drive. 
+              A high-end wedding planning interface that maps directly onto a single Google Sheet in your personal Google Drive.
               No databases, no proprietary tracking. Your sheet is your data.
             </p>
           </div>
@@ -408,7 +408,7 @@ export default function Sheet2VowDashboard() {
                 </>
               ) : (
                 <>
-                  <Sparkles size={16} style={{ marginRight: '0.5rem' }} /> 
+                  <Sparkles size={16} style={{ marginRight: '0.5rem' }} />
                   {isMockMode ? 'LAUNCH DEMO PLATFORM' : 'GENERATE PERSONAL WEDDING DRIVE FILE'}
                 </>
               )}
@@ -494,8 +494,8 @@ export default function Sheet2VowDashboard() {
               )}
 
               {activeTab === 'guests' && weddingData && (
-                <GuestListManager 
-                  guests={weddingData.guests} 
+                <GuestListManager
+                  guests={weddingData.guests}
                   onUpdate={(data) => syncUpdate('guests', data)}
                   isSyncing={isSyncing}
                 />
@@ -771,7 +771,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: '1px solid var(--color-primary)',
     gap: '0.5rem 1rem',
     marginBottom: '2rem',
-    paddingBottom: '2px',
+    paddingBottom: '20px',
   },
   navTabBtn: {
     fontFamily: 'var(--font-mono)',

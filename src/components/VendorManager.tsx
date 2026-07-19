@@ -514,7 +514,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'var(--color-bg)',
     borderRadius: 'var(--border-radius-md)',
     boxShadow: 'var(--box-shadow-subtle)',
-    border: '1px solid rgba(0,0,0,0.05)',
+    border: '2px solid #000',
     display: 'flex',
     flexDirection: 'column',
   },
