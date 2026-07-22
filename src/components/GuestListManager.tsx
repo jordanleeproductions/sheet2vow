@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Guest, AgeCategory, RSVPStatus } from '@/lib/sheets/types';
-import { User, Mail, Phone, MapPin, Coffee, Tag, Plus, Edit2, Check, X } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Coffee, Tag, Plus, Edit2, Check, X, Utensils, Users, Grid, AlertTriangle } from 'lucide-react';
 
 interface GuestListManagerProps {
   guests: Guest[];
@@ -20,6 +20,9 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [formState, setFormState] = useState<Partial<Guest>>({});
+
+  // View Display State ('grid' | 'seating' | 'party')
+  const [displayView, setDisplayView] = useState<'grid' | 'seating' | 'party'>('grid');
 
   // Unique list of groups for filtering
   const groups = Array.from(new Set(guests.map(g => g.partyGroup).filter(Boolean)));
@@ -40,6 +43,30 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
     
     return matchesSearch && matchesRsvp && matchesGroup;
   });
+
+  // Grouping helper for Seating Tables
+  const tableGroupsMap = filteredGuests.reduce((acc, guest) => {
+    const table = (guest.tableAssignment || '').trim() || 'Unassigned';
+    if (!acc[table]) acc[table] = [];
+    acc[table].push(guest);
+    return acc;
+  }, {} as Record<string, Guest[]>);
+
+  const tableKeys = Object.keys(tableGroupsMap).sort((a, b) => {
+    if (a === 'Unassigned') return -1;
+    if (b === 'Unassigned') return 1;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  // Grouping helper for Party Groups
+  const partyGroupsMap = filteredGuests.reduce((acc, guest) => {
+    const party = (guest.partyGroup || '').trim() || 'General';
+    if (!acc[party]) acc[party] = [];
+    acc[party].push(guest);
+    return acc;
+  }, {} as Record<string, Guest[]>);
+
+  const partyKeys = Object.keys(partyGroupsMap).sort();
 
   // Handle Edit Click
   const startEdit = (guest: Guest) => {
@@ -101,14 +128,128 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
     setIsAdding(false);
   };
 
+  const renderGuestCard = (guest: Guest) => {
+    const rsvpColor = 
+      guest.rsvpStatus === 'Attending' ? 'var(--color-primary)' :
+      guest.rsvpStatus === 'Declined' ? 'var(--color-muted)' :
+      '#e6b800'; // dark gold/amber
+
+    return (
+      <div key={guest.guestId} style={styles.card}>
+        <div style={styles.cardHeader}>
+          <div style={styles.cardMeta}>
+            <span style={styles.monoBadge}>{guest.partyGroup.toUpperCase()}</span>
+            <span style={{ ...styles.monoBadge, backgroundColor: 'var(--color-highlight)' }}>
+              {guest.ageCategory.toUpperCase()}
+            </span>
+          </div>
+          <button style={styles.editBtn} onClick={() => startEdit(guest)}>
+            <Edit2 size={12} />
+          </button>
+        </div>
+
+        <h3 style={styles.cardName}>{guest.firstName} {guest.lastName}</h3>
+
+        <div style={styles.cardDetails}>
+          <div style={styles.detailColumn}>
+            {guest.emailAddress && (
+              <div style={styles.detailItem}>
+                <Mail size={12} style={styles.icon} />
+                <span>{guest.emailAddress}</span>
+              </div>
+            )}
+            {guest.phoneNumber && (
+              <div style={styles.detailItem}>
+                <Phone size={12} style={styles.icon} />
+                <span>{guest.phoneNumber}</span>
+              </div>
+            )}
+          </div>
+          <div style={styles.detailColumn}>
+            <div style={styles.detailItem}>
+              <Coffee size={12} style={styles.icon} />
+              <span>Diet: {guest.dietaryRestrictions || 'None'}</span>
+            </div>
+            <div style={styles.detailItem}>
+              <Tag size={12} style={styles.icon} />
+              <span>Table: {guest.tableAssignment || 'Unassigned'}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* RSVP Status Selector Toggle */}
+        <div style={styles.rsvpToggleSection}>
+          <span style={styles.rsvpLabel}>RSVP STATUS:</span>
+          <div style={styles.rsvpButtonGroup}>
+            {(['No Response', 'Attending', 'Declined'] as RSVPStatus[]).map((status) => {
+              const isSelected = guest.rsvpStatus === status;
+              const btnStyle = isSelected 
+                ? { ...styles.rsvpToggleBtn, backgroundColor: rsvpColor, color: rsvpColor === 'var(--color-primary)' ? 'var(--color-on-primary)' : '#fff', border: `1px solid ${rsvpColor}` }
+                : styles.rsvpToggleBtn;
+
+              return (
+                <button 
+                  key={status} 
+                  style={btnStyle}
+                  onClick={() => handleQuickRsvp(guest, status)}
+                  disabled={isSyncing}
+                >
+                  {status === 'No Response' ? '?' : status.toUpperCase()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={styles.container}>
       {/* Header Panel */}
       <div style={styles.header}>
         <h2 style={styles.title}>Guest Registry</h2>
-        <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
-          <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD GUEST
-        </button>
+        <div style={styles.headerActions}>
+          <div style={styles.viewToggle}>
+            <button
+              style={{
+                ...styles.toggleBtn,
+                backgroundColor: displayView === 'grid' ? 'var(--color-primary)' : 'transparent',
+                color: displayView === 'grid' ? 'var(--color-on-primary)' : 'var(--color-muted)'
+              }}
+              onClick={() => setDisplayView('grid')}
+              title="All Guests Grid"
+            >
+              <Grid size={14} style={{ marginRight: '0.25rem' }} /> ALL
+            </button>
+            <button
+              style={{
+                ...styles.toggleBtn,
+                backgroundColor: displayView === 'seating' ? 'var(--color-primary)' : 'transparent',
+                color: displayView === 'seating' ? 'var(--color-on-primary)' : 'var(--color-muted)'
+              }}
+              onClick={() => setDisplayView('seating')}
+              title="Seating Chart View"
+            >
+              <Utensils size={14} style={{ marginRight: '0.25rem' }} /> SEATING
+            </button>
+            <button
+              style={{
+                ...styles.toggleBtn,
+                backgroundColor: displayView === 'party' ? 'var(--color-primary)' : 'transparent',
+                color: displayView === 'party' ? 'var(--color-on-primary)' : 'var(--color-muted)'
+              }}
+              onClick={() => setDisplayView('party')}
+              title="Party Group View"
+            >
+              <Users size={14} style={{ marginRight: '0.25rem' }} /> GROUPS
+            </button>
+          </div>
+
+          <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
+            <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD GUEST
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -156,89 +297,87 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
         </span>
       </div>
 
-      {/* Cards Grid */}
-      <div style={styles.grid}>
-        {filteredGuests.map((guest) => {
-          const rsvpColor = 
-            guest.rsvpStatus === 'Attending' ? 'var(--color-primary)' :
-            guest.rsvpStatus === 'Declined' ? 'var(--color-muted)' :
-            '#e6b800'; // dark gold/amber
-            
-          const rsvpBg = 
-            guest.rsvpStatus === 'Attending' ? '#eef2f7' :
-            guest.rsvpStatus === 'Declined' ? '#f4f5f6' :
-            'var(--color-highlight)';
+      {/* View Content */}
+      {displayView === 'grid' && (
+        <div style={styles.grid}>
+          {filteredGuests.map(guest => renderGuestCard(guest))}
+          {filteredGuests.length === 0 && (
+            <div style={styles.emptyState}>No guests found matching filters.</div>
+          )}
+        </div>
+      )}
 
-          return (
-            <div key={guest.guestId} style={styles.card}>
-              <div style={styles.cardHeader}>
-                <div style={styles.cardMeta}>
-                  <span style={styles.monoBadge}>{guest.partyGroup.toUpperCase()}</span>
-                  <span style={{ ...styles.monoBadge, backgroundColor: 'var(--color-highlight)' }}>
-                    {guest.ageCategory.toUpperCase()}
-                  </span>
-                </div>
-                <button style={styles.editBtn} onClick={() => startEdit(guest)}>
-                  <Edit2 size={12} />
-                </button>
-              </div>
+      {displayView === 'seating' && (
+        <div style={styles.clustersContainer}>
+          {tableKeys.map(table => {
+            const tableGuests = tableGroupsMap[table];
+            const attendingCount = tableGuests.filter(g => g.rsvpStatus === 'Attending').length;
+            const isUnassigned = table === 'Unassigned';
 
-              <h3 style={styles.cardName}>{guest.firstName} {guest.lastName}</h3>
-
-              <div style={styles.cardDetails}>
-                <div style={styles.detailColumn}>
-                  {guest.emailAddress && (
-                    <div style={styles.detailItem}>
-                      <Mail size={12} style={styles.icon} />
-                      <span>{guest.emailAddress}</span>
-                    </div>
-                  )}
-                  {guest.phoneNumber && (
-                    <div style={styles.detailItem}>
-                      <Phone size={12} style={styles.icon} />
-                      <span>{guest.phoneNumber}</span>
-                    </div>
-                  )}
-                </div>
-                <div style={styles.detailColumn}>
-                  <div style={styles.detailItem}>
-                    <Coffee size={12} style={styles.icon} />
-                    <span>Diet: {guest.dietaryRestrictions || 'None'}</span>
+            return (
+              <div key={table} style={{
+                ...styles.clusterCard,
+                borderColor: isUnassigned ? '#ef4444' : 'var(--color-muted)',
+                backgroundColor: isUnassigned ? '#fff5f5' : 'var(--color-bg)'
+              }}>
+                <div style={styles.clusterHeader}>
+                  <div style={styles.clusterTitleRow}>
+                    <Utensils size={18} style={{ color: isUnassigned ? '#ef4444' : 'var(--color-primary)' }} />
+                    <h3 style={{ ...styles.clusterTitle, color: isUnassigned ? '#ef4444' : 'var(--color-primary)' }}>
+                      {isUnassigned ? 'UNASSIGNED SEATING' : table.toUpperCase()}
+                    </h3>
+                    {isUnassigned && (
+                      <span style={styles.unassignedBadge}>
+                        <AlertTriangle size={11} style={{ marginRight: '0.2rem' }} /> {tableGuests.length} NEED TABLES
+                      </span>
+                    )}
                   </div>
-                  <div style={styles.detailItem}>
-                    <Tag size={12} style={styles.icon} />
-                    <span>Table: {guest.tableAssignment || 'Unassigned'}</span>
+                  <div style={styles.clusterMeta}>
+                    <span>{tableGuests.length} Guests ({attendingCount} Attending)</span>
                   </div>
                 </div>
-              </div>
 
-              {/* RSVP Status Selector Toggle */}
-              <div style={styles.rsvpToggleSection}>
-                <span style={styles.rsvpLabel}>RSVP STATUS:</span>
-                <div style={styles.rsvpButtonGroup}>
-                  {(['No Response', 'Attending', 'Declined'] as RSVPStatus[]).map((status) => {
-                    const isSelected = guest.rsvpStatus === status;
-                    const btnStyle = isSelected 
-                      ? { ...styles.rsvpToggleBtn, backgroundColor: rsvpColor, color: rsvpColor === 'var(--color-primary)' ? 'var(--color-on-primary)' : '#fff', border: `1px solid ${rsvpColor}` }
-                      : styles.rsvpToggleBtn;
-
-                    return (
-                      <button 
-                        key={status} 
-                        style={btnStyle}
-                        onClick={() => handleQuickRsvp(guest, status)}
-                        disabled={isSyncing}
-                      >
-                        {status === 'No Response' ? '?' : status.toUpperCase()}
-                      </button>
-                    );
-                  })}
+                <div style={styles.grid}>
+                  {tableGuests.map(guest => renderGuestCard(guest))}
                 </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+          {tableKeys.length === 0 && (
+            <div style={styles.emptyState}>No guests found matching filters.</div>
+          )}
+        </div>
+      )}
+
+      {displayView === 'party' && (
+        <div style={styles.clustersContainer}>
+          {partyKeys.map(party => {
+            const partyGuests = partyGroupsMap[party];
+            const attendingCount = partyGuests.filter(g => g.rsvpStatus === 'Attending').length;
+
+            return (
+              <div key={party} style={styles.clusterCard}>
+                <div style={styles.clusterHeader}>
+                  <div style={styles.clusterTitleRow}>
+                    <Tag size={18} style={{ color: 'var(--color-primary)' }} />
+                    <h3 style={styles.clusterTitle}>{party.toUpperCase()}</h3>
+                  </div>
+                  <div style={styles.clusterMeta}>
+                    <span>{partyGuests.length} Guests ({attendingCount} Attending)</span>
+                  </div>
+                </div>
+
+                <div style={styles.grid}>
+                  {partyGuests.map(guest => renderGuestCard(guest))}
+                </div>
+              </div>
+            );
+          })}
+          {partyKeys.length === 0 && (
+            <div style={styles.emptyState}>No guests found matching filters.</div>
+          )}
+        </div>
+      )}
 
       {/* Editor Overlay Modal */}
       {(editingGuest || isAdding) && (
@@ -406,6 +545,83 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'var(--font-serif)',
     fontSize: '1.5rem',
     color: 'var(--color-primary)',
+  },
+  headerActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
+  },
+  viewToggle: {
+    display: 'flex',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    overflow: 'hidden',
+  },
+  toggleBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    border: 'none',
+    padding: '0.4rem 0.6rem',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'var(--transition-smooth)',
+  },
+  clustersContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.5rem',
+    marginTop: '0.5rem',
+  },
+  clusterCard: {
+    backgroundColor: 'var(--color-bg)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '1.25rem',
+    boxShadow: 'var(--box-shadow-subtle)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  clusterHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--color-muted)',
+    paddingBottom: '0.75rem',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+  },
+  clusterTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  clusterTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.25rem',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+    margin: 0,
+  },
+  clusterMeta: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    color: 'var(--color-muted)',
+    fontWeight: 600,
+  },
+  unassignedBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    backgroundColor: '#fee2e2',
+    color: '#ef4444',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 'var(--border-radius-sm)',
+    display: 'inline-flex',
+    alignItems: 'center',
   },
   addButton: {
     fontFamily: 'var(--font-mono)',
