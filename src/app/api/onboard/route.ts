@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDriveClient, getSheetsClient, DEFAULT_MASTER_SHEET_ID } from '@/lib/sheets/client';
+import { updateMockDatabase } from '@/lib/sheets/mockDb';
 
 export async function POST(req: Request) {
   try {
@@ -7,20 +8,22 @@ export async function POST(req: Request) {
     const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
     
     const body = await req.json().catch(() => ({}));
-    const { weddingName, budget } = body;
+    const { weddingName, budget, driveFolder, selectedTasks } = body;
 
     const finalWeddingName = weddingName || 'Our Wedding';
     const finalBudget = Number(budget) || 30000;
+    const finalSelectedTasks = Array.isArray(selectedTasks) ? selectedTasks : [];
 
     // Support Mock Mode for out-of-the-box local testing
     if (!accessToken || accessToken === 'mock-token') {
+      updateMockDatabase(finalWeddingName, finalBudget, finalSelectedTasks);
       return NextResponse.json({
         success: true,
         spreadsheetId: 'mock-sheet-id-vow-12345',
         weddingName: finalWeddingName,
         budget: finalBudget,
         isMock: true,
-        message: 'Onboarded successfully in Mock Mode (no Google OAuth credentials provided).'
+        message: `Onboarded successfully in Mock Mode. Folder: ${driveFolder || 'Root'}`
       });
     }
 

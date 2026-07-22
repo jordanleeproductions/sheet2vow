@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Task, KanbanStage } from '@/lib/sheets/types';
-import { Plus, Edit2, ArrowRight, ArrowLeft, Trash2, Calendar, User, X } from 'lucide-react';
+import { Plus, Edit2, ArrowRight, ArrowLeft, Trash2, Calendar, User, X, Clock, AlertTriangle } from 'lucide-react';
 
 interface KanbanBoardProps {
   tasks: Task[];
@@ -18,6 +18,49 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
   const [isAdding, setIsAdding] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [formState, setFormState] = useState<Partial<Task>>({});
+
+  // Sorting state
+  const [sortField, setSortField] = useState<'default' | 'priority' | 'dueDate'>('default');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortClick = (field: 'priority' | 'dueDate') => {
+    if (sortField === field) {
+      if (sortDirection === 'asc') {
+        setSortDirection('desc');
+      } else {
+        setSortField('default');
+        setSortDirection('asc');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedTasks = (taskList: Task[]) => {
+    if (sortField === 'default') return taskList;
+
+    return [...taskList].sort((a, b) => {
+      if (sortField === 'priority') {
+        const priorityMap: Record<string, number> = { high: 1, medium: 2, low: 3 };
+        const priA = priorityMap[(a.priority || '').toLowerCase()] || 4;
+        const priB = priorityMap[(b.priority || '').toLowerCase()] || 4;
+        return sortDirection === 'asc' ? priA - priB : priB - priA;
+      }
+
+      if (sortField === 'dueDate') {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+
+        const timeA = new Date(a.dueDate).getTime();
+        const timeB = new Date(b.dueDate).getTime();
+        return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      return 0;
+    });
+  };
 
   const stages: KanbanStage[] = ['To Do', 'In Progress', 'Done'];
 
@@ -104,11 +147,61 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
   return (
     <div style={styles.container}>
       {/* Header */}
-      <div style={styles.header}>
-        <h2 style={styles.title}>Kanban Checklist</h2>
-        <button style={styles.addButton} onClick={() => startAdd('To Do')} disabled={isSyncing}>
-          <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD TASK
-        </button>
+      <div style={styles.header} className="kanban-header">
+        <div className="kanban-header-top">
+          <h2 style={styles.title}>Kanban Checklist</h2>
+          <button style={styles.addButton} className="kanban-add-btn-mobile" onClick={() => startAdd('To Do')} disabled={isSyncing}>
+            <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD TASK
+          </button>
+        </div>
+
+        <div style={styles.headerActions} className="kanban-header-actions">
+          <div style={styles.sortGroup} className="kanban-sort-bar">
+            <span style={styles.sortLabel}>SORT:</span>
+            <button
+              style={{
+                ...styles.sortBtn,
+                backgroundColor: sortField === 'priority' ? 'var(--color-primary)' : 'transparent',
+                color: sortField === 'priority' ? 'var(--color-on-primary)' : 'var(--color-text)',
+                borderColor: sortField === 'priority' ? 'var(--color-primary)' : 'var(--color-muted)'
+              }}
+              className="kanban-sort-btn"
+              onClick={() => handleSortClick('priority')}
+              title="Sort by Priority"
+            >
+              <AlertTriangle size={13} style={{ marginRight: '0.25rem' }} />
+              PRIORITY {sortField === 'priority' ? (sortDirection === 'asc' ? '↓' : '↑') : ''}
+            </button>
+            <button
+              style={{
+                ...styles.sortBtn,
+                backgroundColor: sortField === 'dueDate' ? 'var(--color-primary)' : 'transparent',
+                color: sortField === 'dueDate' ? 'var(--color-on-primary)' : 'var(--color-text)',
+                borderColor: sortField === 'dueDate' ? 'var(--color-primary)' : 'var(--color-muted)'
+              }}
+              className="kanban-sort-btn"
+              onClick={() => handleSortClick('dueDate')}
+              title="Sort by Due Date"
+            >
+              <Clock size={13} style={{ marginRight: '0.25rem' }} />
+              DUE DATE {sortField === 'dueDate' ? (sortDirection === 'asc' ? '↓' : '↑') : ''}
+            </button>
+            {sortField !== 'default' && (
+              <button
+                style={styles.clearSortBtn}
+                className="kanban-sort-reset"
+                onClick={() => setSortField('default')}
+                title="Reset Sorting"
+              >
+                RESET
+              </button>
+            )}
+          </div>
+
+          <button style={styles.addButton} className="kanban-add-btn-desktop" onClick={() => startAdd('To Do')} disabled={isSyncing}>
+            <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD TASK
+          </button>
+        </div>
       </div>
 
       {/* Editor Modal */}
@@ -259,7 +352,7 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
       {/* Desktop side-by-side Columns */}
       <div style={styles.boardGrid} className="kanban-grid">
         {stages.map(stage => {
-          const stageTasks = tasks.filter(t => t.kanbanStage === stage);
+          const stageTasks = getSortedTasks(tasks.filter(t => t.kanbanStage === stage));
           const isMobileVisible = activeMobileStage === stage;
           
           return (
@@ -360,7 +453,7 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
         })}
       </div>
 
-      {/* CSS details to ensure columns switch properly */}
+      {/* CSS details to ensure columns and header switch properly on mobile */}
       <style jsx global>{`
         @media (max-width: 767px) {
           .mobile-hidden {
@@ -371,8 +464,46 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
           }
           .kanban-grid {
             grid-template-columns: 1fr !important;
-            width: 85%;
+            width: 100% !important;
             margin: 0 auto;
+          }
+          .kanban-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.75rem !important;
+          }
+          .kanban-header-top {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            width: 100% !important;
+          }
+          .kanban-header-actions {
+            width: 100% !important;
+          }
+          .kanban-sort-bar {
+            display: flex !important;
+            align-items: center !important;
+            width: 100% !important;
+            gap: 0.35rem !important;
+          }
+          .kanban-sort-btn {
+            flex: 1 !important;
+            justify-content: center !important;
+            text-align: center !important;
+            padding: 0.45rem 0.25rem !important;
+          }
+          .kanban-add-btn-desktop {
+            display: none !important;
+          }
+        }
+
+        @media (min-width: 768px) {
+          .kanban-header-top {
+            display: contents !important;
+          }
+          .kanban-add-btn-mobile {
+            display: none !important;
           }
         }
       `}</style>
@@ -397,6 +528,46 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'var(--font-serif)',
     fontSize: '1.5rem',
     color: 'var(--color-primary)',
+  },
+  headerActions: {
+    display: 'flex',
+    gap: '0.5rem',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  sortGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    marginRight: '0.25rem',
+  },
+  sortLabel: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    color: 'var(--color-muted)',
+    fontWeight: 600,
+  },
+  sortBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    padding: '0.35rem 0.6rem',
+    borderRadius: 'var(--border-radius-sm)',
+    border: '1px solid var(--color-muted)',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'var(--transition-smooth)',
+  },
+  clearSortBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.625rem',
+    padding: '0.35rem 0.5rem',
+    backgroundColor: 'transparent',
+    color: 'var(--color-muted)',
+    border: '1px dashed var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    cursor: 'pointer',
   },
   addButton: {
     fontFamily: 'var(--font-mono)',

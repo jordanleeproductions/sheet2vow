@@ -9,7 +9,8 @@ import TimelineManager from '@/components/TimelineManager';
 import KanbanBoard from '@/components/KanbanBoard';
 import VendorManager from '@/components/VendorManager';
 import MusicManager from '@/components/MusicManager';
-import { RefreshCw, HardDrive, Heart, Sparkles, AlertCircle, FileSpreadsheet, Settings } from 'lucide-react';
+import { RefreshCw, HardDrive, Heart, Sparkles, AlertCircle, FileSpreadsheet, Settings, Check } from 'lucide-react';
+import { ALL_DEFAULT_TASKS } from '@/lib/sheets/mockDb';
 
 export default function Sheet2VowDashboard() {
   // Authentication & Spreadsheet Settings
@@ -20,6 +21,16 @@ export default function Sheet2VowDashboard() {
   const [weddingName, setWeddingName] = useState<string>('');
   const [weddingDate, setWeddingDate] = useState<string>('');
   const [budgetThreshold, setBudgetThreshold] = useState<number>(35000);
+  const [driveFolder, setDriveFolder] = useState<string>('My Drive/Wedding Planning');
+  const [selectedTasks, setSelectedTasks] = useState<string[]>(ALL_DEFAULT_TASKS.map(t => t.taskName));
+
+  const toggleTaskSelection = (taskName: string) => {
+    setSelectedTasks(prev => 
+      prev.includes(taskName) 
+        ? prev.filter(t => t !== taskName) 
+        : [...prev, taskName]
+    );
+  };
 
   // Theme and Settings
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -45,6 +56,7 @@ export default function Sheet2VowDashboard() {
     const savedDate = localStorage.getItem('s2v_wedding_date');
     const savedTheme = localStorage.getItem('s2v_theme');
     const savedColor = localStorage.getItem('s2v_primary_color');
+    const savedFolder = localStorage.getItem('s2v_drive_folder');
 
     if (savedSheetId) setSpreadsheetId(savedSheetId);
     if (savedToken) setGoogleToken(savedToken);
@@ -54,6 +66,7 @@ export default function Sheet2VowDashboard() {
     if (savedDate) setWeddingDate(savedDate);
     if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
     if (savedColor) setPrimaryColor(savedColor);
+    if (savedFolder) setDriveFolder(savedFolder);
   }, []);
 
   // Apply theme when it changes
@@ -132,7 +145,9 @@ export default function Sheet2VowDashboard() {
         headers,
         body: JSON.stringify({
           weddingName,
-          budget: budgetThreshold
+          budget: budgetThreshold,
+          driveFolder,
+          selectedTasks
         })
       });
 
@@ -146,6 +161,7 @@ export default function Sheet2VowDashboard() {
         localStorage.setItem('s2v_is_mock', isMockMode ? 'true' : 'false');
         localStorage.setItem('s2v_wedding_name', res.weddingName);
         localStorage.setItem('s2v_wedding_date', weddingDate);
+        localStorage.setItem('s2v_drive_folder', driveFolder);
       } else {
         throw new Error(res.error || 'Onboarding failed');
       }
@@ -158,7 +174,7 @@ export default function Sheet2VowDashboard() {
   };
 
   // Sync / Update specific sheet category back to Google Sheets
-  const syncUpdate = async (sheetType: 'guests' | 'budget' | 'schedule' | 'tasks' | 'music', updatedData: any) => {
+  const syncUpdate = async (sheetType: 'guests' | 'budget' | 'schedule' | 'tasks' | 'music' | 'vendors', updatedData: any) => {
     if (isSyncing || !spreadsheetId) return;
     setIsSyncing(true);
     setSyncError(null);
@@ -287,7 +303,7 @@ export default function Sheet2VowDashboard() {
                     {isMockMode ? 'MOCK DATA (NO SPREADSHEET)' : 'OPEN GOOGLE SHEET'}
                   </a>
                 </div>
-                <button style={styles.disconnectBtn} onClick={handleDisconnect} style={{ width: '100%', marginTop: '0.5rem' }}>
+                <button style={{ ...styles.disconnectBtn, width: '100%', marginTop: '0.5rem' }} onClick={handleDisconnect}>
                   DISCONNECT
                 </button>
               </div>
@@ -310,53 +326,36 @@ export default function Sheet2VowDashboard() {
           </div>
 
           <form onSubmit={handleOnboard} style={styles.onboardForm}>
-            {/* Mode Selectors */}
-            <div style={styles.modeTabs}>
-              <button
-                type="button"
-                onClick={() => setIsMockMode(true)}
-                style={{
-                  ...styles.modeTabBtn,
-                  backgroundColor: isMockMode ? 'var(--color-primary)' : 'transparent',
-                  color: isMockMode ? '#fff' : 'var(--color-muted)',
-                  border: `1px solid ${isMockMode ? 'var(--color-primary)' : 'var(--color-muted)'}`
-                }}
-              >
-                TEST IN MOCK MODE
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsMockMode(false)}
-                style={{
-                  ...styles.modeTabBtn,
-                  backgroundColor: !isMockMode ? 'var(--color-primary)' : 'transparent',
-                  color: !isMockMode ? '#fff' : 'var(--color-muted)',
-                  border: `1px solid ${!isMockMode ? 'var(--color-primary)' : 'var(--color-muted)'}`
-                }}
-              >
-                CONNECT GOOGLE DRIVE
-              </button>
-            </div>
-
-            {/* Google OAuth configuration if real client requested */}
-            {!isMockMode && (
-              <div style={styles.oauthSection}>
-                <div style={styles.fieldGroup}>
-                  <label style={styles.label}>GOOGLE ACCOUNT OAUTH ACCESS TOKEN *</label>
-                  <input
-                    type="password"
-                    required
-                    placeholder="Enter your OAuth access_token..."
-                    value={googleToken}
-                    onChange={(e) => setGoogleToken(e.target.value)}
-                    style={styles.input}
-                  />
-                  <span style={styles.fieldInfo}>
-                    Requires scopes: <code>drive.file</code> and <code>spreadsheets</code>.
-                  </span>
+            {/* Authenticated User Status */}
+            <div style={styles.authStatusBox}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={styles.checkCircle}>
+                  <Check size={14} style={{ color: '#fff' }} />
+                </div>
+                <div>
+                  <span style={styles.authStatusLabel}>GOOGLE WORKSPACE CONNECTED</span>
+                  <div style={styles.authEmail}>jordan.lee@gmail.com</div>
                 </div>
               </div>
-            )}
+            </div>
+
+            {/* Folder Destination Dropdown */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>GOOGLE DRIVE TARGET DIRECTORY *</label>
+              <select
+                value={driveFolder}
+                onChange={(e) => setDriveFolder(e.target.value)}
+                style={styles.select}
+              >
+                <option value="My Drive (Root)">My Drive (Root)</option>
+                <option value="My Drive/Wedding Planning">My Drive/Wedding Planning</option>
+                <option value="My Drive/Events/Wedding 2026">My Drive/Events/Wedding 2026</option>
+                <option value="My Drive/Sheet2Vow">My Drive/Sheet2Vow</option>
+              </select>
+              <span style={styles.fieldInfo}>
+                The master wedding sheet will be copied here.
+              </span>
+            </div>
 
             {/* Wedding Initial Settings */}
             <div style={styles.fieldGroup}>
@@ -394,6 +393,29 @@ export default function Sheet2VowDashboard() {
               />
             </div>
 
+            {/* Task Prepopulation Section */}
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>PREPOPULATE CHECKLIST (IMPORT DEFAULT TASKS)</label>
+              <div style={styles.tasksChecklist}>
+                {ALL_DEFAULT_TASKS.map((task) => {
+                  const isChecked = selectedTasks.includes(task.taskName);
+                  return (
+                    <label key={task.taskId} style={styles.taskChecklabel}>
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleTaskSelection(task.taskName)}
+                        style={styles.checkboxInput}
+                      />
+                      <span style={{ fontSize: '0.8rem', color: isChecked ? 'var(--color-text)' : 'var(--color-muted)' }}>
+                        {task.taskName} ({task.category})
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             {syncError && (
               <div style={styles.errorBox}>
                 <AlertCircle size={16} />
@@ -409,7 +431,7 @@ export default function Sheet2VowDashboard() {
               ) : (
                 <>
                   <Sparkles size={16} style={{ marginRight: '0.5rem' }} />
-                  {isMockMode ? 'LAUNCH DEMO PLATFORM' : 'GENERATE PERSONAL WEDDING DRIVE FILE'}
+                  GENERATE PERSONAL WEDDING DRIVE FILE
                 </>
               )}
             </button>
@@ -632,26 +654,57 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: '1.25rem',
   },
-  modeTabs: {
-    display: 'flex',
-    gap: '0.5rem',
+  authStatusBox: {
+    backgroundColor: '#eef2f7',
+    border: '2px solid var(--color-primary)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.75rem',
     marginBottom: '0.5rem',
   },
-  modeTabBtn: {
-    flex: 1,
-    fontFamily: 'var(--font-mono)',
-    fontSize: '0.65rem',
-    fontWeight: 600,
-    padding: '0.625rem 0.25rem',
-    borderRadius: 'var(--border-radius-sm)',
-    cursor: 'pointer',
-    transition: 'var(--transition-smooth)',
+  checkCircle: {
+    width: '20px',
+    height: '20px',
+    borderRadius: '50%',
+    backgroundColor: '#10b981',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  oauthSection: {
-    backgroundColor: '#f8f9fa',
+  authStatusLabel: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    color: 'var(--color-muted)',
+    fontWeight: 600,
+    display: 'block',
+  },
+  authEmail: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    color: 'var(--color-text)',
+  },
+  tasksChecklist: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+    maxHeight: '180px',
+    overflowY: 'auto',
+    backgroundColor: 'var(--color-surface, #fff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-sm)',
     padding: '0.75rem',
+  },
+  taskChecklabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    cursor: 'pointer',
+    userSelect: 'none',
+  },
+  checkboxInput: {
+    width: '14px',
+    height: '14px',
+    cursor: 'pointer',
   },
   fieldGroup: {
     display: 'flex',
@@ -669,6 +722,14 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-sm)',
     fontSize: '0.875rem',
+  },
+  select: {
+    padding: '0.625rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    fontSize: '0.875rem',
+    backgroundColor: 'var(--color-bg, #fff)',
+    color: 'var(--color-text)',
   },
   fieldInfo: {
     fontFamily: 'var(--font-mono)',

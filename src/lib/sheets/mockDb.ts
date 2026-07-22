@@ -1,0 +1,74 @@
+import { WeddingData } from './types';
+
+export let mockWeddingName = 'Our Wedding';
+
+export const ALL_DEFAULT_TASKS = [
+  { taskId: 'T1', taskName: 'Finalize Guest Seating Chart', kanbanStage: 'In Progress' as const, category: 'Guests', priority: 'High', assignedTo: 'Sarah', dueDate: '2026-08-15', notes: 'Wait for RSVPs before final assignments.' },
+  { taskId: 'T2', taskName: 'Approve Catering Menu', kanbanStage: 'Done' as const, category: 'Catering', priority: 'High', assignedTo: 'John & Sarah', dueDate: '2026-07-10', notes: 'Tasting completed. Pork belly & Sea bass selected.' },
+  { taskId: 'T3', taskName: 'Purchase Groomsmen Suits', kanbanStage: 'To Do' as const, category: 'Attire', priority: 'Medium', assignedTo: 'John', dueDate: '2026-07-30', notes: 'Fittings scheduled for next Saturday.' },
+  { taskId: 'T4', taskName: 'Submit Marriage License App', kanbanStage: 'To Do' as const, category: 'Legal', priority: 'High', assignedTo: 'John & Sarah', dueDate: '2026-08-01', notes: 'Need to bring certified birth certificates.' },
+  { taskId: 'T5', taskName: 'Order Wedding Cake', kanbanStage: 'In Progress' as const, category: 'Catering', priority: 'Medium', assignedTo: 'Sarah', dueDate: '2026-08-10', notes: '3-tier vanilla almond cake with gold foil details.' },
+  { taskId: 'T6', taskName: 'Book Wedding Night Suite', kanbanStage: 'Done' as const, category: 'Venue', priority: 'Low', assignedTo: 'John', dueDate: '2026-06-01', notes: 'Booked at Plaza Suite. Late checkout confirmed.' },
+  { taskId: 'T7', taskName: 'Write Wedding Vows', kanbanStage: 'To Do' as const, category: 'Personal', priority: 'Medium', assignedTo: 'John & Sarah', dueDate: '2026-09-01', notes: 'Write in personal vows notebooks.' },
+  { taskId: 'T8', taskName: 'Confirm Song Lists with DJ', kanbanStage: 'To Do' as const, category: 'Music', priority: 'Low', assignedTo: 'John', dueDate: '2026-09-05', notes: 'Submit do-not-play list.' },
+];
+
+export let mockDatabase: WeddingData = {
+  dashboard: {
+    totalBudget: 35000,
+    estimatedCost: 32700,
+    actualCost: 14200,
+    remainingTasks: 4
+  },
+  guests: [
+    { guestId: 'G1', firstName: 'Sarah', lastName: 'Connor', partyGroup: 'Bride Family', ageCategory: 'Adult', rsvpStatus: 'Attending', dietaryRestrictions: 'Gluten Free', tableAssignment: 'Table 1', emailAddress: 'sarah@example.com', phoneNumber: '555-0199', mailingAddress: '123 Main St, LA' },
+    { guestId: 'G2', firstName: 'John', lastName: 'Connor', partyGroup: 'Bride Family', ageCategory: 'Youth', rsvpStatus: 'Attending', dietaryRestrictions: 'None', tableAssignment: 'Table 1', emailAddress: 'john@example.com', phoneNumber: '555-0120', mailingAddress: '123 Main St, LA' },
+    { guestId: 'G3', firstName: 'Marcus', lastName: 'Wright', partyGroup: 'Groom Friends', ageCategory: 'Adult', rsvpStatus: 'Declined', dietaryRestrictions: 'Vegan', tableAssignment: 'None', emailAddress: 'marcus@example.com', phoneNumber: '555-0143', mailingAddress: '456 Oak Rd, Chicago' },
+    { guestId: 'G4', firstName: 'Kate', lastName: 'Brewster', partyGroup: 'Groom Family', ageCategory: 'Adult', rsvpStatus: 'Attending', dietaryRestrictions: 'None', tableAssignment: 'Table 2', emailAddress: 'kate@example.com', phoneNumber: '555-0187', mailingAddress: '789 Pine Ave, Seattle' },
+    { guestId: 'G5', firstName: 'Tim', lastName: 'Brewster', partyGroup: 'Groom Family', ageCategory: 'Child', rsvpStatus: 'Attending', dietaryRestrictions: 'Nut Allergy', tableAssignment: 'Table 2', emailAddress: 'tim@example.com', phoneNumber: '555-0188', mailingAddress: '789 Pine Ave, Seattle' },
+    { guestId: 'G6', firstName: 'Danny', lastName: 'Dyson', partyGroup: 'Bride Friends', ageCategory: 'Infant', rsvpStatus: 'Attending', dietaryRestrictions: 'None', tableAssignment: 'Table 1', emailAddress: 'danny@example.com', phoneNumber: '555-0155', mailingAddress: '321 Elm Blvd, Austin' },
+    { guestId: 'G7', firstName: 'Miles', lastName: 'Dyson', partyGroup: 'Bride Friends', ageCategory: 'Adult', rsvpStatus: 'No Response', dietaryRestrictions: 'None', tableAssignment: 'Table 3', emailAddress: 'miles@example.com', phoneNumber: '555-0154', mailingAddress: '321 Elm Blvd, Austin' },
+  ],
+  budget: [
+    { itemId: 'B1', category: 'Venue', vendorName: 'Grand Plaza Hall', estimatedCost: 15000, actualCost: 15000, amountPaid: 5000, dueDate: '2026-08-01', paymentStatus: 'Pending' },
+    { itemId: 'B2', category: 'Catering', vendorName: 'Gourmet Delights', estimatedCost: 8000, actualCost: 7500, amountPaid: 7500, dueDate: '2026-07-15', paymentStatus: 'Paid' },
+    { itemId: 'B3', category: 'Photography', vendorName: 'Golden Hour Photo', estimatedCost: 3500, actualCost: 3500, amountPaid: 1750, dueDate: '2026-09-10', paymentStatus: 'Pending' },
+    { itemId: 'B4', category: 'Attire', vendorName: 'Vows & Veils Boutique', estimatedCost: 2500, actualCost: 2800, amountPaid: 2800, dueDate: '2026-05-20', paymentStatus: 'Paid' },
+    { itemId: 'B5', category: 'Florals', vendorName: 'Bloom & Petal', estimatedCost: 2000, actualCost: 2200, amountPaid: 0, dueDate: '2026-10-01', paymentStatus: 'Pending' },
+    { itemId: 'B6', category: 'Music/DJ', vendorName: 'BeatDrop Entertainment', estimatedCost: 1700, actualCost: 1700, amountPaid: 1700, dueDate: '2026-07-01', paymentStatus: 'Paid' },
+  ],
+  schedule: [
+    { startTime: '08:00 AM', endTime: '10:00 AM', eventMoment: 'Hair & Makeup Styling', location: 'Bridal Suite', responsibility: 'Glam Team (Vows & Veils)', notes: 'Bride & Bridesmaids need to start on time. Mimosas and fruit platter served.' },
+    { startTime: '11:00 AM', endTime: '12:00 PM', eventMoment: 'Groom Prep & Portraits', location: 'Hotel Lounge', responsibility: 'Groom, Groomsmen, Photographer', notes: 'Detail shots of rings, watch, and suit.' },
+    { startTime: '01:30 PM', endTime: '02:30 PM', eventMoment: 'First Look & Couple Portraits', location: 'Garden Path', responsibility: 'Photographer, Planner', notes: 'Keep guests away. Sunset point backup if rain.' },
+    { startTime: '04:00 PM', endTime: '04:30 PM', eventMoment: 'Ceremony Service', location: 'Courtyard Lawn', responsibility: 'Officiant, Musicians', notes: 'Live harp starts playing at 3:30 PM as guests sit.' },
+    { startTime: '05:00 PM', endTime: '06:00 PM', eventMoment: 'Cocktail Hour', location: 'West Terrace', responsibility: 'Caterer, Bartenders', notes: 'Open bar, 4 tray-passed hors d\'oeuvres. Family photos taken.' },
+    { startTime: '06:30 PM', endTime: '10:00 PM', eventMoment: 'Reception & Dinner', location: 'Grand Ballroom', responsibility: 'DJ, Caterer, MC', notes: 'First dance at 6:45 PM. Cake cutting at 8:30 PM.' },
+  ],
+  vendors: [
+    { vendorId: 'V1', vendorName: 'Grand Plaza Hall', category: 'Venue', contactName: 'Evelyn Bennett', emailAddress: 'evelyn@grandplaza.com', phoneNumber: '555-9081', totalContractValue: 15000, depositPaid: 5000, balanceOwing: 10000, paymentDueDate: '2026-08-01', contractLink: 'https://example.com/contracts/venue.pdf', staffMealsRequired: 'No' },
+    { vendorId: 'V2', vendorName: 'Gourmet Delights', category: 'Catering', contactName: 'Chef Robert', emailAddress: 'robert@gourmetdelights.net', phoneNumber: '555-2241', totalContractValue: 7500, depositPaid: 7500, balanceOwing: 0, paymentDueDate: '2026-07-15', contractLink: 'https://example.com/contracts/catering.pdf', staffMealsRequired: 'Yes' },
+    { vendorId: 'V3', vendorName: 'Golden Hour Photo', category: 'Photography', contactName: 'Mark Vance', emailAddress: 'mark@goldenhour.com', phoneNumber: '555-7033', totalContractValue: 3500, depositPaid: 1750, balanceOwing: 1750, paymentDueDate: '2026-09-10', contractLink: 'https://example.com/contracts/photo.pdf', staffMealsRequired: 'Yes' },
+    { vendorId: 'V4', vendorName: 'Bloom & Petal', category: 'Florals', contactName: 'Jessica Rose', emailAddress: 'jessica@bloompetal.com', phoneNumber: '555-1294', totalContractValue: 2200, depositPaid: 0, balanceOwing: 2200, paymentDueDate: '2026-10-01', contractLink: 'https://example.com/contracts/florals.pdf', staffMealsRequired: 'No' },
+    { vendorId: 'V5', vendorName: 'BeatDrop Entertainment', category: 'Music/DJ', contactName: 'DJ Spark', emailAddress: 'spark@beatdrop.fm', phoneNumber: '555-8832', totalContractValue: 1700, depositPaid: 1700, balanceOwing: 0, paymentDueDate: '2026-07-01', contractLink: 'https://example.com/contracts/dj.pdf', staffMealsRequired: 'Yes' },
+  ],
+  tasks: ALL_DEFAULT_TASKS,
+  music: [
+    { songId: 'M1', title: 'Perfect', artist: 'Ed Sheeran', listType: 'Special Moment', link: 'https://open.spotify.com/track/0tgVpDi06FyKpA1z0VMD4v', notes: 'First Dance' },
+    { songId: 'M2', title: 'Uptown Funk', artist: 'Mark Ronson ft. Bruno Mars', listType: 'Play List', link: 'https://open.spotify.com/track/32OlwWuMpZ6b0aN2RZOeMS', notes: 'Get people on the dance floor' },
+    { songId: 'M3', title: 'Macarena', artist: 'Los Del Rio', listType: 'Do Not Play', link: '', notes: 'Absolutely NO' },
+    { songId: 'M4', title: 'September', artist: 'Earth, Wind & Fire', listType: 'Play List', link: 'https://open.spotify.com/track/2tJulUYLDKOg9XrtVkMgcJ', notes: 'Classic' },
+    { songId: 'M5', title: 'Chicken Dance', artist: 'The Emeralds', listType: 'Do Not Play', link: '', notes: 'Never play this' },
+  ]
+};
+
+export function setMockWeddingName(name: string) {
+  mockWeddingName = name;
+}
+
+export function updateMockDatabase(weddingName: string, budget: number, selectedTaskNames: string[]) {
+  mockWeddingName = weddingName;
+  mockDatabase.dashboard.totalBudget = budget;
+  mockDatabase.tasks = ALL_DEFAULT_TASKS.filter(task => selectedTaskNames.includes(task.taskName));
+  mockDatabase.dashboard.remainingTasks = mockDatabase.tasks.filter(t => t.kanbanStage !== 'Done').length;
+}
