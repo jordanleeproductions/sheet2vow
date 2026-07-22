@@ -19,8 +19,28 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
   const [isAdding, setIsAdding] = useState(false);
   const [formState, setFormState] = useState<Partial<BudgetItem>>({});
 
-  // Unique categories for summaries
+  // Search & Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Paid' | 'Pending'>('All');
+
+  // Unique categories for summaries & dropdowns
   const categories = Array.from(new Set(budget.map(item => item.category).filter(Boolean)));
+
+  const filteredBudget = budget.filter(item => {
+    const matchesSearch = 
+      (item.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.vendorName || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory = categoryFilter === 'All' || (item.category || '').toLowerCase() === categoryFilter.toLowerCase();
+    
+    const matchesStatus = 
+      statusFilter === 'All' ? true :
+      statusFilter === 'Paid' ? (item.paymentStatus || '').toLowerCase() === 'paid' :
+      (item.paymentStatus || '').toLowerCase() !== 'paid';
+
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   // Totals
   const totalEstimate = budget.reduce((sum, item) => sum + item.estimatedCost, 0);
@@ -125,6 +145,40 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
         </div>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div style={styles.filterBar}>
+        <input
+          type="text"
+          placeholder="SEARCH CATEGORY OR VENDOR..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={styles.searchInput}
+        />
+        
+        <div style={styles.filtersGroup}>
+          <select 
+            value={categoryFilter} 
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={styles.filterSelect}
+          >
+            <option value="All">ALL CATEGORIES</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+            ))}
+          </select>
+
+          <select 
+            value={statusFilter} 
+            onChange={(e) => setStatusFilter(e.target.value as any)}
+            style={styles.filterSelect}
+          >
+            <option value="All">ALL STATUSES</option>
+            <option value="Paid">PAID</option>
+            <option value="Pending">PENDING</option>
+          </select>
+        </div>
+      </div>
+
       {viewMode === 'table' ? (
         /* Ledger Table View */
         <div style={styles.tableWrapper}>
@@ -143,7 +197,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
               </tr>
             </thead>
             <tbody>
-              {budget.map((item) => {
+              {filteredBudget.map((item) => {
                 const owing = item.actualCost - item.amountPaid;
                 return (
                   <tr key={item.itemId} style={styles.tr}>
@@ -249,7 +303,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
             </div>
           </div>
 
-          {budget.map(item => {
+          {filteredBudget.map(item => {
             const owing = item.actualCost - item.amountPaid;
             return (
               <div key={item.itemId} style={styles.card}>
@@ -436,6 +490,38 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: '1rem',
+  },
+  filterBar: {
+    display: 'flex',
+    gap: '0.75rem',
+    marginBottom: '0.5rem',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  searchInput: {
+    flex: '1 1 240px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+  },
+  filtersGroup: {
+    display: 'flex',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+  },
+  filterSelect: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    cursor: 'pointer',
   },
   header: {
     display: 'flex',

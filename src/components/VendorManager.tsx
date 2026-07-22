@@ -16,6 +16,31 @@ export default function VendorManager({ vendors, onUpdate, isSyncing }: VendorMa
   const [isAdding, setIsAdding] = useState(false);
   const [formState, setFormState] = useState<Partial<Vendor>>({});
 
+  // Search & Filtering state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [paymentFilter, setPaymentFilter] = useState<'All' | 'Paid' | 'Balance Due'>('All');
+
+  const categories = Array.from(new Set(vendors.map(v => v.category).filter(Boolean)));
+
+  const filteredVendors = vendors.filter(v => {
+    const matchesSearch = 
+      (v.vendorName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.contactName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.emailAddress || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.phoneNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory = categoryFilter === 'All' || (v.category || '').toLowerCase() === categoryFilter.toLowerCase();
+
+    const matchesPayment = 
+      paymentFilter === 'All' ? true :
+      paymentFilter === 'Paid' ? v.balanceOwing <= 0 :
+      v.balanceOwing > 0;
+
+    return matchesSearch && matchesCategory && matchesPayment;
+  });
+
   const startAdd = () => {
     setFormState({
       category: '',
@@ -129,6 +154,40 @@ export default function VendorManager({ vendors, onUpdate, isSyncing }: VendorMa
         </div>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div style={styles.filterBar}>
+        <input
+          type="text"
+          placeholder="SEARCH VENDORS, CATEGORY, OR CONTACT..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={styles.searchInput}
+        />
+        
+        <div style={styles.filtersGroup}>
+          <select 
+            value={categoryFilter} 
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            style={styles.filterSelect}
+          >
+            <option value="All">ALL CATEGORIES</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+            ))}
+          </select>
+
+          <select 
+            value={paymentFilter} 
+            onChange={(e) => setPaymentFilter(e.target.value as any)}
+            style={styles.filterSelect}
+          >
+            <option value="All">ALL STATUSES</option>
+            <option value="Paid">PAID IN FULL</option>
+            <option value="Balance Due">BALANCE OWING</option>
+          </select>
+        </div>
+      </div>
+
       {viewMode === 'table' ? (
         <div style={styles.tableWrapper}>
           <table style={styles.table}>
@@ -145,7 +204,7 @@ export default function VendorManager({ vendors, onUpdate, isSyncing }: VendorMa
               </tr>
             </thead>
             <tbody>
-              {vendors.map((item) => (
+              {filteredVendors.map((item) => (
                 <tr key={item.vendorId} style={styles.tr}>
                   <td style={styles.td}>
                     <div style={{ fontWeight: 600, color: 'var(--color-text)' }}>{item.vendorName}</div>
@@ -173,9 +232,9 @@ export default function VendorManager({ vendors, onUpdate, isSyncing }: VendorMa
                   </td>
                 </tr>
               ))}
-              {vendors.length === 0 && (
+              {filteredVendors.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={styles.emptyState}>No vendors added yet.</td>
+                  <td colSpan={8} style={styles.emptyState}>No vendors found.</td>
                 </tr>
               )}
             </tbody>
@@ -183,7 +242,7 @@ export default function VendorManager({ vendors, onUpdate, isSyncing }: VendorMa
         </div>
       ) : (
         <div style={styles.cardGrid}>
-          {vendors.map((item) => (
+          {filteredVendors.map((item) => (
             <div key={item.vendorId} style={styles.card}>
               <div style={styles.cardHeader}>
                 <div>
@@ -613,6 +672,38 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
     gap: '1rem',
+  },
+  filterBar: {
+    display: 'flex',
+    gap: '0.75rem',
+    marginBottom: '0.5rem',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  searchInput: {
+    flex: '1 1 240px',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+  },
+  filtersGroup: {
+    display: 'flex',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+  },
+  filterSelect: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    cursor: 'pointer',
   },
   formGroup: {
     display: 'flex',

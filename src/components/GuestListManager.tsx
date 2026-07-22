@@ -27,8 +27,14 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
   // Filtered Guests
   const filteredGuests = guests.filter(guest => {
     const fullName = `${guest.firstName} ${guest.lastName}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) || 
-                          guest.emailAddress.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      fullName.includes(searchLower) || 
+      (guest.emailAddress || '').toLowerCase().includes(searchLower) ||
+      (guest.dietaryRestrictions || '').toLowerCase().includes(searchLower) ||
+      (guest.tableAssignment || '').toLowerCase().includes(searchLower) ||
+      (guest.phoneNumber || '').toLowerCase().includes(searchLower);
+
     const matchesRsvp = rsvpFilter === 'All' || guest.rsvpStatus === rsvpFilter;
     const matchesGroup = groupFilter === 'All' || guest.partyGroup === groupFilter;
     
@@ -109,7 +115,7 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
       <div style={styles.filterBar}>
         <input
           type="text"
-          placeholder="SEARCH GUEST OR EMAIL..."
+          placeholder="SEARCH GUEST, EMAIL, DIET, OR TABLE..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={styles.searchInput}
