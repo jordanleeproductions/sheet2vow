@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { BudgetItem } from '@/lib/sheets/types';
-import { Plus, Edit2, Check, X, Trash2, HelpCircle, Grid, List } from 'lucide-react';
+import { Plus, Edit2, Check, X, Trash2, HelpCircle, Grid, List, AlertTriangle, TrendingUp, PieChart } from 'lucide-react';
 
 interface BudgetLedgerManagerProps {
   budget: BudgetItem[];
@@ -28,16 +28,16 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
   const categories = Array.from(new Set(budget.map(item => item.category).filter(Boolean)));
 
   const filteredBudget = budget.filter(item => {
-    const matchesSearch = 
+    const matchesSearch =
       (item.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.vendorName || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesCategory = categoryFilter === 'All' || (item.category || '').toLowerCase() === categoryFilter.toLowerCase();
-    
-    const matchesStatus = 
+
+    const matchesStatus =
       statusFilter === 'All' ? true :
-      statusFilter === 'Paid' ? (item.paymentStatus || '').toLowerCase() === 'paid' :
-      (item.paymentStatus || '').toLowerCase() !== 'paid';
+        statusFilter === 'Paid' ? (item.paymentStatus || '').toLowerCase() === 'paid' :
+          (item.paymentStatus || '').toLowerCase() !== 'paid';
 
     return matchesSearch && matchesCategory && matchesStatus;
   });
@@ -47,6 +47,35 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
   const totalActual = budget.reduce((sum, item) => sum + item.actualCost, 0);
   const totalPaid = budget.reduce((sum, item) => sum + item.amountPaid, 0);
   const totalBalance = budget.reduce((sum, item) => sum + (item.actualCost - item.amountPaid), 0);
+
+  // Utilization & Health Meters
+  const percentUtilized = totalEstimate > 0 ? Math.round((totalActual / totalEstimate) * 100) : 0;
+  const isOverallOverBudget = totalActual > totalEstimate;
+  const overallHeadroom = totalEstimate - totalActual;
+
+  const meterBarColor =
+    percentUtilized > 100 ? '#ef4444' :
+      percentUtilized > 90 ? '#cda250' :
+        '#10b981';
+
+  // Category Health Breakdown
+  const categoryStats = categories.map(cat => {
+    const catItems = budget.filter(item => item.category === cat);
+    const catEstimate = catItems.reduce((sum, i) => sum + i.estimatedCost, 0);
+    const catActual = catItems.reduce((sum, i) => sum + i.actualCost, 0);
+    const catPercent = catEstimate > 0 ? Math.min(Math.round((catActual / catEstimate) * 100), 150) : (catActual > 0 ? 100 : 0);
+    const isOver = catActual > catEstimate;
+    const overAmount = catActual - catEstimate;
+
+    return {
+      category: cat,
+      estimated: catEstimate,
+      actual: catActual,
+      percent: catPercent,
+      isOver,
+      overAmount
+    };
+  });
 
   // Form actions
   const startAdd = () => {
@@ -102,7 +131,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
       };
       updatedBudget = [...budget, newItem];
     } else {
-      updatedBudget = budget.map(item => 
+      updatedBudget = budget.map(item =>
         item.itemId === editingItem?.itemId ? { ...item, ...formState } as BudgetItem : item
       );
     }
@@ -145,6 +174,67 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
         </div>
       </div>
 
+      {/* Budget Progress & Health Banner */}
+      <div style={styles.meterCard}>
+        <div style={styles.meterHeader}>
+          <div>
+            <span style={styles.meterSubtext}>BUDGET UTILIZATION</span>
+            <div style={styles.meterTitleRow}>
+              <h3 style={styles.meterTitle}>${totalActual.toLocaleString()} <span style={{ fontSize: '0.85rem', color: 'var(--color-muted)', fontWeight: 400 }}>of ${totalEstimate.toLocaleString()} Estimated</span></h3>
+              {isOverallOverBudget ? (
+                <span style={styles.overBadgeMain}>
+                  <AlertTriangle size={12} style={{ marginRight: '0.25rem' }} /> OVER BUDGET (+${(totalActual - totalEstimate).toLocaleString()})
+                </span>
+              ) : (
+                <span style={styles.headroomBadge}>
+                  ${overallHeadroom.toLocaleString()} REMAINING
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={styles.percentDisplay}>
+            <span style={{ ...styles.percentValue, color: meterBarColor }}>{percentUtilized}%</span>
+          </div>
+        </div>
+
+        {/* Progress Track */}
+        <div style={styles.progressTrack}>
+          <div style={{
+            ...styles.progressFill,
+            width: `${Math.min(percentUtilized, 100)}%`,
+            backgroundColor: meterBarColor
+          }} />
+        </div>
+
+        {/* Category Breakdown Progress Meters */}
+        {categoryStats.length > 0 && (
+          <div style={styles.categoryMeterGrid}>
+            {categoryStats.map(stat => (
+              <div key={stat.category} style={{
+                ...styles.categoryChip,
+                borderColor: stat.isOver ? '#ef4444' : 'var(--color-muted)'
+              }}>
+                <div style={styles.categoryChipHeader}>
+                  <span style={styles.categoryChipName}>{stat.category}</span>
+                  {stat.isOver ? (
+                    <span style={styles.overBadgeMini}>+${stat.overAmount.toLocaleString()}</span>
+                  ) : (
+                    <span style={styles.categoryChipPercent}>{stat.percent}%</span>
+                  )}
+                </div>
+                <div style={styles.miniTrack}>
+                  <div style={{
+                    ...styles.miniFill,
+                    width: `${Math.min(stat.percent, 100)}%`,
+                    backgroundColor: stat.isOver ? '#ef4444' : stat.percent > 90 ? '#cda250' : '#10b981'
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Filter and Search Bar */}
       <div style={styles.filterBar}>
         <input
@@ -154,10 +244,10 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
           onChange={(e) => setSearchTerm(e.target.value)}
           style={styles.searchInput}
         />
-        
+
         <div style={styles.filtersGroup}>
-          <select 
-            value={categoryFilter} 
+          <select
+            value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
             style={styles.filterSelect}
           >
@@ -167,8 +257,8 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
             ))}
           </select>
 
-          <select 
-            value={statusFilter} 
+          <select
+            value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
             style={styles.filterSelect}
           >
@@ -211,7 +301,14 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                       <span style={styles.monoText}>${item.estimatedCost.toLocaleString()}</span>
                     </td>
                     <td style={{ ...styles.td, textAlign: 'right' }}>
-                      <span style={styles.monoText}>${item.actualCost.toLocaleString()}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={styles.monoText}>${item.actualCost.toLocaleString()}</span>
+                        {item.actualCost > item.estimatedCost && (
+                          <span style={styles.overBadgeTable}>
+                            <AlertTriangle size={10} style={{ marginRight: '2px' }} /> +${(item.actualCost - item.estimatedCost).toLocaleString()}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ ...styles.td, textAlign: 'right' }}>
                       <span style={styles.monoText}>${item.amountPaid.toLocaleString()}</span>
@@ -227,14 +324,14 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                     <td style={styles.td}>
                       <span style={{
                         ...styles.statusTag,
-                        backgroundColor: 
-                          item.paymentStatus === 'Paid' ? '#eef2f7' : 
-                          item.paymentStatus === 'Overdue' ? '#fee2e2' : 
-                          'var(--color-highlight)',
-                        color: 
-                          item.paymentStatus === 'Paid' ? 'var(--color-primary)' : 
-                          item.paymentStatus === 'Overdue' ? '#ef4444' : 
-                          '#cda250'
+                        backgroundColor:
+                          item.paymentStatus === 'Paid' ? '#eef2f7' :
+                            item.paymentStatus === 'Overdue' ? '#fee2e2' :
+                              'var(--color-highlight)',
+                        color:
+                          item.paymentStatus === 'Paid' ? 'var(--color-primary)' :
+                            item.paymentStatus === 'Overdue' ? '#ef4444' :
+                              '#cda250'
                       }}>
                         {item.paymentStatus.toUpperCase()}
                       </span>
@@ -244,8 +341,8 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                         <button style={styles.actionBtn} onClick={() => startEdit(item)}>
                           <Edit2 size={12} />
                         </button>
-                        <button 
-                          style={{ ...styles.actionBtn, color: '#ef4444' }} 
+                        <button
+                          style={{ ...styles.actionBtn, color: '#ef4444' }}
                           onClick={() => deleteItem(item.itemId)}
                           disabled={isSyncing}
                         >
@@ -256,7 +353,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                   </tr>
                 );
               })}
-              
+
               {/* Table Footer Totals */}
               <tr style={styles.footerTr}>
                 <td colSpan={2} style={{ ...styles.td, fontWeight: 700 }}>LEDGER TOTALS</td>
@@ -306,7 +403,10 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
           {filteredBudget.map(item => {
             const owing = item.actualCost - item.amountPaid;
             return (
-              <div key={item.itemId} style={styles.card}>
+              <div key={item.itemId} style={{
+                ...styles.card,
+                borderColor: item.actualCost > item.estimatedCost ? '#ef4444' : 'var(--color-muted)'
+              }}>
                 <div style={styles.cardHeader}>
                   <div style={styles.cardMeta}>
                     <span style={{ ...styles.categoryCell, fontFamily: 'var(--font-serif)', fontSize: '1.25rem', textTransform: 'none' }}>{item.category}</span>
@@ -320,8 +420,14 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                     </button>
                   </div>
                 </div>
+
+                {item.actualCost > item.estimatedCost && (
+                  <div style={styles.overBadgeCard}>
+                    <AlertTriangle size={11} style={{ marginRight: '0.25rem' }} /> OVER ESTIMATE (+${(item.actualCost - item.estimatedCost).toLocaleString()})
+                  </div>
+                )}
                 <h3 style={{ ...styles.cardTitle, fontFamily: 'var(--font-mono)', fontSize: '0.9rem', color: 'var(--color-muted)' }}>{item.vendorName}</h3>
-                
+
                 <div style={styles.cardBody}>
                   <div style={styles.cardRow}>
                     <span style={styles.cardLabel}>ESTIMATED</span>
@@ -345,14 +451,14 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                   <span style={styles.monoText}>{item.dueDate || 'No Date'}</span>
                   <span style={{
                     ...styles.statusTag,
-                    backgroundColor: 
-                      item.paymentStatus === 'Paid' ? '#eef2f7' : 
-                      item.paymentStatus === 'Overdue' ? '#fee2e2' : 
-                      'var(--color-highlight)',
-                    color: 
-                      item.paymentStatus === 'Paid' ? 'var(--color-primary)' : 
-                      item.paymentStatus === 'Overdue' ? '#ef4444' : 
-                      '#cda250'
+                    backgroundColor:
+                      item.paymentStatus === 'Paid' ? '#eef2f7' :
+                        item.paymentStatus === 'Overdue' ? '#fee2e2' :
+                          'var(--color-highlight)',
+                    color:
+                      item.paymentStatus === 'Paid' ? 'var(--color-primary)' :
+                        item.paymentStatus === 'Overdue' ? '#ef4444' :
+                          '#cda250'
                   }}>
                     {item.paymentStatus.toUpperCase()}
                   </span>
@@ -400,7 +506,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                     style={styles.input}
                   />
                 </div>
-                
+
                 <div style={styles.fieldGroup}>
                   <label style={styles.label}>VENDOR NAME</label>
                   <input
@@ -456,7 +562,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
                   />
                 </div>
 
-                <div style={{...styles.fieldGroup, gridColumn: 'span 2'}}>
+                <div style={{ ...styles.fieldGroup, gridColumn: 'span 2' }}>
                   <label style={styles.label}>PAYMENT STATUS</label>
                   <select
                     value={formState.paymentStatus || 'Pending'}
@@ -486,10 +592,157 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: {
+  meterCard: {
+    backgroundColor: 'var(--color-bg)',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '1.25rem',
+    boxShadow: 'var(--box-shadow-subtle)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '1rem',
+    gap: '0.875rem',
+    marginBottom: '0.5rem',
+    marginTop: '.5rem'
+  },
+  meterHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+  },
+  meterSubtext: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    color: 'var(--color-muted)',
+    letterSpacing: '0.05em',
+  },
+  meterTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+    marginTop: '0.125rem',
+    flexWrap: 'wrap',
+  },
+  meterTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.35rem',
+    fontWeight: 700,
+    color: 'var(--color-primary)',
+    margin: 0,
+  },
+  overBadgeMain: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 700,
+    backgroundColor: '#fee2e2',
+    color: '#ef4444',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 'var(--border-radius-sm)',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  headroomBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    backgroundColor: '#ecfdf5',
+    color: '#10b981',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 'var(--border-radius-sm)',
+  },
+  percentDisplay: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  percentValue: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '1.5rem',
+    fontWeight: 700,
+  },
+  progressTrack: {
+    width: '100%',
+    height: '8px',
+    backgroundColor: '#f1f5f9',
+    borderRadius: '4px',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: '4px',
+    transition: 'width 0.4s ease, background-color 0.4s ease',
+  },
+  categoryMeterGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+    gap: '0.5rem',
+    marginTop: '0.25rem',
+  },
+  categoryChip: {
+    backgroundColor: '#f8fafc',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.4rem 0.6rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.25rem',
+  },
+  categoryChipHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryChipName: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.625rem',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+  },
+  categoryChipPercent: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.625rem',
+    color: 'var(--color-muted)',
+  },
+  overBadgeMini: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    fontWeight: 700,
+    color: '#ef4444',
+  },
+  miniTrack: {
+    width: '100%',
+    height: '4px',
+    backgroundColor: '#e2e8f0',
+    borderRadius: '2px',
+    overflow: 'hidden',
+  },
+  miniFill: {
+    height: '100%',
+    borderRadius: '2px',
+  },
+  overBadgeTable: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    fontWeight: 700,
+    color: '#ef4444',
+    backgroundColor: '#fee2e2',
+    padding: '1px 4px',
+    borderRadius: '2px',
+    marginTop: '2px',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  overBadgeCard: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    color: '#ef4444',
+    backgroundColor: '#fee2e2',
+    padding: '0.25rem 0.5rem',
+    borderRadius: 'var(--border-radius-sm)',
+    display: 'flex',
+    alignItems: 'center',
   },
   filterBar: {
     display: 'flex',

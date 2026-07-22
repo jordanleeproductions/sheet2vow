@@ -19,6 +19,24 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
   const [isLoadingAudio, setIsLoadingAudio] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Search & Filter state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterPill, setFilterPill] = useState<string>('ALL');
+
+  const filteredMusic = music.filter(song => {
+    const matchesSearch = 
+      (song.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (song.artist || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (song.notes || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (song.listType || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesFilterPill = 
+      filterPill === 'ALL' ? true :
+      (song.listType || '').toUpperCase() === filterPill.toUpperCase();
+
+    return matchesSearch && matchesFilterPill;
+  });
+
   // Cleanup audio on unmount
   useEffect(() => {
     return () => {
@@ -151,6 +169,46 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
     );
   };
 
+  const renderExternalLinks = (item: Song) => {
+    const spotifyUrl = `https://open.spotify.com/search/${encodeURIComponent(`${item.title} ${item.artist}`)}`;
+    const youtubeUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(`${item.title} ${item.artist}`)}`;
+
+    return (
+      <div style={styles.externalLinksGroup}>
+        {renderSamplePlayer(item)}
+        <a 
+          href={spotifyUrl} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={styles.streamLinkBtn}
+          title="Search on Spotify"
+        >
+          Spotify
+        </a>
+        <a 
+          href={youtubeUrl} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          style={styles.streamLinkBtn}
+          title="Search on YouTube"
+        >
+          YouTube
+        </a>
+        {item.link && (
+          <a 
+            href={item.link} 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            style={styles.customLinkBtn}
+            title="Open Direct Link"
+          >
+            <ExternalLink size={14} />
+          </a>
+        )}
+      </div>
+    );
+  };
+
   const playListSongs = music.filter(s => s.listType !== 'Do Not Play');
   const doNotPlaySongs = music.filter(s => s.listType === 'Do Not Play');
 
@@ -164,96 +222,96 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
         </button>
       </div>
 
-      <div style={styles.listsContainer}>
-        {/* PLAY LIST SECTION */}
-        <div style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <Music size={20} style={{ color: 'var(--color-primary)' }} />
-            <h3 style={styles.sectionTitle}>Requested Songs</h3>
-          </div>
-          
-          <div style={styles.cardGrid}>
-            {playListSongs.map((item) => (
-              <div key={item.songId} style={styles.card}>
-                <div style={styles.cardHeader}>
-                  <div style={styles.cardMeta}>
-                    <span style={styles.categoryBadge}>{item.listType.toUpperCase()}</span>
-                  </div>
-                  <div style={styles.cardActions}>
-                    <button style={styles.actionBtn} onClick={() => startEdit(item)}>
-                      <Edit2 size={14} />
-                    </button>
-                    <button style={{ ...styles.actionBtn, color: '#ef4444' }} onClick={() => deleteItem(item.songId)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-                
-                <div style={styles.cardBodyRow}>
-                  <div style={styles.cardLeftCol}>
-                    <h4 style={styles.songTitle}>{item.title}</h4>
-                    <p style={styles.songArtist}>by {item.artist}</p>
-                  </div>
-                  
-                  <div style={styles.cardRightCol}>
-                    {item.notes && (
-                      <p style={styles.songNotes}>"{item.notes}"</p>
-                    )}
-                    {renderSamplePlayer(item)}
-                  </div>
-                </div>
-              </div>
-            ))}
-            {playListSongs.length === 0 && (
-              <div style={styles.emptyState}>No songs added to the playlist yet.</div>
-            )}
-          </div>
+      {/* Search & Category Filter Bar */}
+      <div style={styles.filterSection}>
+        <input
+          type="text"
+          placeholder="SEARCH SONG TITLE, ARTIST, OR NOTES..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={styles.searchInput}
+        />
+        
+        <div style={styles.pillsRow}>
+          {[
+            { id: 'ALL', label: 'ALL SONGS', count: music.length },
+            { id: 'Play List', label: 'MUST PLAY', count: music.filter(s => s.listType === 'Play List').length },
+            { id: 'First Dance', label: 'FIRST DANCE', count: music.filter(s => s.listType === 'First Dance').length },
+            { id: 'Ceremony', label: 'CEREMONY', count: music.filter(s => s.listType === 'Ceremony').length },
+            { id: 'Reception', label: 'RECEPTION', count: music.filter(s => s.listType === 'Reception').length },
+            { id: 'Do Not Play', label: 'DO NOT PLAY', count: music.filter(s => s.listType === 'Do Not Play').length },
+          ].map(pill => (
+            <button
+              key={pill.id}
+              style={{
+                ...styles.pillBtn,
+                backgroundColor: filterPill === pill.id ? (pill.id === 'Do Not Play' ? '#ef4444' : 'var(--color-primary)') : 'transparent',
+                color: filterPill === pill.id ? 'var(--color-on-primary)' : 'var(--color-text)',
+                borderColor: filterPill === pill.id ? (pill.id === 'Do Not Play' ? '#ef4444' : 'var(--color-primary)') : 'var(--color-muted)',
+              }}
+              onClick={() => setFilterPill(pill.id)}
+            >
+              {pill.label} ({pill.count})
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* DO NOT PLAY SECTION */}
-        <div style={{ ...styles.section, marginTop: '2rem' }}>
-          <div style={styles.sectionHeader}>
-            <Ban size={20} style={{ color: '#ef4444' }} />
-            <h3 style={{ ...styles.sectionTitle, color: '#ef4444' }}>Do Not Play List</h3>
-          </div>
-          
-          <div style={styles.cardGrid}>
-            {doNotPlaySongs.map((item) => (
-              <div key={item.songId} style={{ ...styles.card, borderColor: '#fee2e2', backgroundColor: '#fff5f5' }}>
-                <div style={styles.cardHeader}>
-                  <div style={styles.cardMeta}>
-                    <span style={{ ...styles.categoryBadge, backgroundColor: '#fee2e2', color: '#ef4444' }}>BANNED</span>
-                  </div>
-                  <div style={styles.cardActions}>
-                    <button style={styles.actionBtn} onClick={() => startEdit(item)}>
-                      <Edit2 size={14} />
-                    </button>
-                    <button style={{ ...styles.actionBtn, color: '#ef4444' }} onClick={() => deleteItem(item.songId)}>
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+      <div style={styles.cardGrid}>
+        {filteredMusic.map((item) => {
+          const isBanned = item.listType === 'Do Not Play';
+          return (
+            <div 
+              key={item.songId} 
+              style={{
+                ...styles.card,
+                borderColor: isBanned ? '#fee2e2' : 'var(--color-muted)',
+                backgroundColor: isBanned ? '#fff5f5' : 'var(--color-bg)'
+              }}
+            >
+              <div style={styles.cardHeader}>
+                <div style={styles.cardMeta}>
+                  <span style={{
+                    ...styles.categoryBadge,
+                    backgroundColor: isBanned ? '#fee2e2' : '#eef2f7',
+                    color: isBanned ? '#ef4444' : 'var(--color-primary)'
+                  }}>
+                    {isBanned ? 'BANNED' : item.listType.toUpperCase()}
+                  </span>
                 </div>
-                
-                <div style={styles.cardBodyRow}>
-                  <div style={styles.cardLeftCol}>
-                    <h4 style={{ ...styles.songTitle, color: '#7f1d1d' }}>{item.title}</h4>
-                    <p style={{ ...styles.songArtist, color: '#991b1b' }}>by {item.artist}</p>
-                  </div>
-                  
-                  <div style={styles.cardRightCol}>
-                    {item.notes && (
-                      <p style={{ ...styles.songNotes, color: '#991b1b', backgroundColor: 'rgba(239,68,68,0.1)' }}>"{item.notes}"</p>
-                    )}
-                    {renderSamplePlayer(item)}
-                  </div>
+                <div style={styles.cardActions}>
+                  <button style={styles.actionBtn} onClick={() => startEdit(item)}>
+                    <Edit2 size={14} />
+                  </button>
+                  <button style={{ ...styles.actionBtn, color: '#ef4444' }} onClick={() => deleteItem(item.songId)}>
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-            ))}
-            {doNotPlaySongs.length === 0 && (
-              <div style={styles.emptyState}>No banned songs yet.</div>
-            )}
-          </div>
-        </div>
+              
+              <div style={styles.cardBodyRow}>
+                <div style={styles.cardLeftCol}>
+                  <h4 style={{ ...styles.songTitle, color: isBanned ? '#7f1d1d' : 'var(--color-primary)' }}>{item.title}</h4>
+                  <p style={{ ...styles.songArtist, color: isBanned ? '#991b1b' : 'var(--color-muted)' }}>by {item.artist}</p>
+                </div>
+                
+                <div style={styles.cardRightCol}>
+                  {item.notes && (
+                    <p style={{
+                      ...styles.songNotes,
+                      color: isBanned ? '#991b1b' : 'var(--color-muted)',
+                      backgroundColor: isBanned ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.03)'
+                    }}>"{item.notes}"</p>
+                  )}
+                  {renderExternalLinks(item)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filteredMusic.length === 0 && (
+          <div style={styles.emptyState}>No songs found matching your search/filter.</div>
+        )}
       </div>
 
       {/* Modal Overlay for Add/Edit */}
@@ -296,9 +354,11 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
                     value={formState.listType || 'Play List'}
                     onChange={(e) => handleFormChange('listType', e.target.value)}
                   >
-                    <option value="Play List">Play List</option>
+                    <option value="Play List">Play List (Must Play)</option>
+                    <option value="First Dance">First Dance</option>
+                    <option value="Ceremony">Ceremony</option>
+                    <option value="Reception">Reception</option>
                     <option value="Special Moment">Special Moment</option>
-                    <option value="General">General</option>
                     <option value="Do Not Play">Do Not Play</option>
                   </select>
                 </div>
@@ -344,6 +404,61 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
 const styles: Record<string, React.CSSProperties> = {
   container: {
     fontFamily: 'var(--font-sans)',
+  },
+  filterSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+    marginBottom: '1.25rem',
+  },
+  searchInput: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    width: '100%',
+  },
+  pillsRow: {
+    display: 'flex',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  pillBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    padding: '0.35rem 0.65rem',
+    borderRadius: 'var(--border-radius-sm)',
+    border: '1px solid var(--color-muted)',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  externalLinksGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.4rem',
+    flexWrap: 'wrap',
+  },
+  streamLinkBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    fontWeight: 600,
+    color: 'var(--color-primary)',
+    backgroundColor: '#f1f5f9',
+    padding: '0.2rem 0.4rem',
+    borderRadius: 'var(--border-radius-sm)',
+    textDecoration: 'none',
+    border: '1px solid var(--color-muted)',
+  },
+  customLinkBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    color: 'var(--color-primary)',
+    padding: '0.2rem',
   },
   header: {
     display: 'flex',
