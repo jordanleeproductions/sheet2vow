@@ -84,3 +84,18 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--color-primary);
 }
+
+/* Print Media Styles for PDF & Paper Exports */
+@media print {
+  header, nav, button, input, select, [role="button"], .no-print {
+    display: none !important;
+  }
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

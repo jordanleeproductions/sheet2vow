@@ -42,6 +42,8 @@ export interface ScheduleEvent {
   location: string;
   responsibility: string; // From "Responsibility / Vendors"
   notes: string; // From "Notes / Details"
+  eventDate?: string;
+  isAfterMidnight?: boolean;
 }
 
 export interface Vendor {

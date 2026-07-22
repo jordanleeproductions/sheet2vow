@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Guest, AgeCategory, RSVPStatus } from '@/lib/sheets/types';
-import { User, Mail, Phone, MapPin, Coffee, Tag, Plus, Edit2, Check, X, Utensils, Users, Grid, AlertTriangle } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Coffee, Tag, Plus, Edit2, Check, X, Utensils, Users, Grid, AlertTriangle, Download, Printer } from 'lucide-react';
 
 interface GuestListManagerProps {
   guests: Guest[];
@@ -128,6 +128,36 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
     setIsAdding(false);
   };
 
+  const exportToCSV = () => {
+    const headers = ['Guest ID', 'First Name', 'Last Name', 'Party Group', 'Age Category', 'RSVP Status', 'Dietary Restrictions', 'Table Assignment', 'Email', 'Phone', 'Address'];
+    const rows = filteredGuests.map(g => [
+      `"${g.guestId || ''}"`,
+      `"${g.firstName || ''}"`,
+      `"${g.lastName || ''}"`,
+      `"${g.partyGroup || ''}"`,
+      `"${g.ageCategory || ''}"`,
+      `"${g.rsvpStatus || ''}"`,
+      `"${g.dietaryRestrictions || ''}"`,
+      `"${g.tableAssignment || ''}"`,
+      `"${g.emailAddress || ''}"`,
+      `"${g.phoneNumber || ''}"`,
+      `"${g.mailingAddress || ''}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'wedding_guests.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   const renderGuestCard = (guest: Guest) => {
     const rsvpColor = 
       guest.rsvpStatus === 'Attending' ? 'var(--color-primary)' :
@@ -246,9 +276,17 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
             </button>
           </div>
 
-          <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
-            <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD GUEST
-          </button>
+          <div style={styles.actionButtonGroup}>
+            <button style={styles.secondaryBtn} onClick={exportToCSV} title="Export CSV Spreadsheet">
+              <Download size={14} style={{ marginRight: '0.25rem' }} /> CSV
+            </button>
+            <button style={styles.secondaryBtn} onClick={handlePrint} title="Print Guest Registry">
+              <Printer size={14} style={{ marginRight: '0.25rem' }} /> PRINT
+            </button>
+            <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
+              <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD GUEST
+            </button>
+          </div>
         </div>
       </div>
 
@@ -551,6 +589,25 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '0.75rem',
     flexWrap: 'wrap',
+  },
+  actionButtonGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  secondaryBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    backgroundColor: 'transparent',
+    color: 'var(--color-primary)',
+    border: '1px solid var(--color-primary)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.4rem 0.6rem',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'var(--transition-smooth)',
   },
   viewToggle: {
     display: 'flex',

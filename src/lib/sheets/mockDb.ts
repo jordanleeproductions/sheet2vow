@@ -44,6 +44,7 @@ export let mockDatabase: WeddingData = {
     { startTime: '04:00 PM', endTime: '04:30 PM', eventMoment: 'Ceremony Service', location: 'Courtyard Lawn', responsibility: 'Officiant, Musicians', notes: 'Live harp starts playing at 3:30 PM as guests sit.' },
     { startTime: '05:00 PM', endTime: '06:00 PM', eventMoment: 'Cocktail Hour', location: 'West Terrace', responsibility: 'Caterer, Bartenders', notes: 'Open bar, 4 tray-passed hors d\'oeuvres. Family photos taken.' },
     { startTime: '06:30 PM', endTime: '10:00 PM', eventMoment: 'Reception & Dinner', location: 'Grand Ballroom', responsibility: 'DJ, Caterer, MC', notes: 'First dance at 6:45 PM. Cake cutting at 8:30 PM.' },
+    { startTime: '01:00 AM', endTime: '01:30 AM', eventMoment: 'After-Party Shuttle Departure', location: 'Main Entrance', responsibility: 'Transportation Driver', notes: 'Final shuttle taking guests to hotel suite.', isAfterMidnight: true, eventDate: 'Next Day (+1)' },
   ],
   vendors: [
     { vendorId: 'V1', vendorName: 'Grand Plaza Hall', category: 'Venue', contactName: 'Evelyn Bennett', emailAddress: 'evelyn@grandplaza.com', phoneNumber: '555-9081', totalContractValue: 15000, depositPaid: 5000, balanceOwing: 10000, paymentDueDate: '2026-08-01', contractLink: 'https://example.com/contracts/venue.pdf', staffMealsRequired: 'No' },

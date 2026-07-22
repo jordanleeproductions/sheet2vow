@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ScheduleEvent } from '@/lib/sheets/types';
-import { Clock, MapPin, User, ChevronDown, ChevronUp, Plus, Edit2, X } from 'lucide-react';
+import { Clock, MapPin, User, ChevronDown, ChevronUp, Plus, Edit2, X, ChevronLeft, ChevronRight, Sparkles, Moon, Download, Printer } from 'lucide-react';
 
 interface TimelineManagerProps {
   schedule: ScheduleEvent[];
@@ -17,9 +17,51 @@ export default function TimelineManager({ schedule, onUpdate, isSyncing }: Timel
   
   const [formState, setFormState] = useState<Partial<ScheduleEvent>>({});
 
-  // Sorting timeline events by Start Time (basic text comparison or user sorted order)
-  // Google Sheet order is generally the true order, so we'll maintain the sheet order
-  const events = schedule;
+  // Search, Role Filter, and UP NEXT Active State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('ALL');
+  const [activeEventIndex, setActiveEventIndex] = useState<number>(0);
+
+  const roles = Array.from(new Set(
+    schedule.flatMap(e => (e.responsibility || '').split(/[,/]/).map(r => r.trim()).filter(Boolean))
+  ));
+
+  function isLateNightTime(timeStr: string): boolean {
+    if (!timeStr) return false;
+    const str = timeStr.trim().toLowerCase();
+    if (str.includes('am')) {
+      const hourMatch = str.match(/^(\d{1,2})/);
+      if (hourMatch) {
+        const hour = parseInt(hourMatch[1], 10);
+        if (hour === 12 || (hour >= 1 && hour <= 4)) {
+          return true;
+        }
+      }
+    }
+    const match24 = str.match(/^0([0-4]):/);
+    if (match24) return true;
+    return false;
+  }
+
+  const filteredEventsWithIndex = schedule
+    .map((event, originalIndex) => ({ event, originalIndex }))
+    .filter(({ event }) => {
+      const matchesSearch = 
+        (event.eventMoment || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.location || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.responsibility || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (event.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesRole = selectedRole === 'ALL' || 
+        (event.responsibility || '').toLowerCase().includes(selectedRole.toLowerCase());
+
+      return matchesSearch && matchesRole;
+    })
+    .sort((a, b) => {
+      const isNightA = a.event.isAfterMidnight || isLateNightTime(a.event.startTime) ? 1 : 0;
+      const isNightB = b.event.isAfterMidnight || isLateNightTime(b.event.startTime) ? 1 : 0;
+      return isNightA - isNightB;
+    });
 
   const toggleExpand = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
@@ -72,14 +114,165 @@ export default function TimelineManager({ schedule, onUpdate, isSyncing }: Timel
     await onUpdate(updated);
   };
 
+  const exportToCSV = () => {
+    const headers = ['Start Time', 'End Time', 'Event Moment', 'Location', 'Responsibility', 'Notes', 'Is After Midnight'];
+    const rows = schedule.map(e => [
+      `"${e.startTime || ''}"`,
+      `"${e.endTime || ''}"`,
+      `"${e.eventMoment || ''}"`,
+      `"${e.location || ''}"`,
+      `"${e.responsibility || ''}"`,
+      `"${e.notes || ''}"`,
+      `"${e.isAfterMidnight ? 'Yes' : 'No'}"`
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'day_of_schedule.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div style={styles.container}>
       {/* Header */}
       <div style={styles.header}>
         <h2 style={styles.title}>Day-Of Schedule</h2>
-        <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
-          <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD EVENT
-        </button>
+        <div style={styles.actionButtonGroup}>
+          <button style={styles.secondaryBtn} onClick={exportToCSV} title="Export CSV Spreadsheet">
+            <Download size={14} style={{ marginRight: '0.25rem' }} /> CSV
+          </button>
+          <button style={styles.secondaryBtn} onClick={handlePrint} title="Print Day-Of Schedule">
+            <Printer size={14} style={{ marginRight: '0.25rem' }} /> PRINT
+          </button>
+          <button style={styles.addButton} onClick={startAdd} disabled={isSyncing}>
+            <Plus size={16} style={{ marginRight: '0.25rem' }} /> ADD EVENT
+          </button>
+        </div>
+      </div>
+
+      {/* UP NEXT Featured Event Banner */}
+      {schedule.length > 0 && (
+        <div style={styles.upNextCard}>
+          <div style={styles.upNextHeader}>
+            <div style={styles.upNextBadgeRow}>
+              <span style={styles.upNextBadge}>
+                <Sparkles size={12} style={{ marginRight: '0.25rem' }} /> UP NEXT MOMENT
+              </span>
+              <span style={styles.upNextIndexText}>
+                Moment {activeEventIndex + 1} of {schedule.length}
+              </span>
+            </div>
+
+            <div style={styles.upNextNavGroup}>
+              <button
+                style={{
+                  ...styles.navBtn,
+                  opacity: activeEventIndex === 0 ? 0.4 : 1,
+                  cursor: activeEventIndex === 0 ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => setActiveEventIndex(prev => Math.max(0, prev - 1))}
+                disabled={activeEventIndex === 0}
+                title="Previous Moment"
+              >
+                <ChevronLeft size={16} /> PREV
+              </button>
+              <button
+                style={{
+                  ...styles.navBtn,
+                  opacity: activeEventIndex >= schedule.length - 1 ? 0.4 : 1,
+                  cursor: activeEventIndex >= schedule.length - 1 ? 'not-allowed' : 'pointer'
+                }}
+                onClick={() => setActiveEventIndex(prev => Math.min(schedule.length - 1, prev + 1))}
+                disabled={activeEventIndex >= schedule.length - 1}
+                title="Next Moment"
+              >
+                NEXT <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          {schedule[activeEventIndex] && (
+            <div style={styles.upNextBody}>
+              <div style={styles.upNextTimeRow}>
+                <span style={styles.upNextTime}>{schedule[activeEventIndex].startTime}</span>
+                {schedule[activeEventIndex].endTime && (
+                  <span style={styles.upNextEndTime}>to {schedule[activeEventIndex].endTime}</span>
+                )}
+              </div>
+              <h3 style={styles.upNextMomentTitle}>{schedule[activeEventIndex].eventMoment}</h3>
+
+              <div style={styles.upNextMetaRow}>
+                {schedule[activeEventIndex].location && (
+                  <div style={styles.upNextMetaItem}>
+                    <MapPin size={13} style={{ color: 'var(--color-primary)' }} />
+                    <span>{schedule[activeEventIndex].location}</span>
+                  </div>
+                )}
+                {schedule[activeEventIndex].responsibility && (
+                  <div style={styles.upNextMetaItem}>
+                    <User size={13} style={{ color: 'var(--color-primary)' }} />
+                    <span>{schedule[activeEventIndex].responsibility}</span>
+                  </div>
+                )}
+              </div>
+
+              {schedule[activeEventIndex].notes && (
+                <p style={styles.upNextNotes}>"{schedule[activeEventIndex].notes}"</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Role Filter & Search Bar */}
+      <div style={styles.filterSection}>
+        <input
+          type="text"
+          placeholder="SEARCH EVENT, LOCATION, OR VENDOR..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={styles.searchInput}
+        />
+        
+        <div style={styles.pillsRow}>
+          <button
+            style={{
+              ...styles.pillBtn,
+              backgroundColor: selectedRole === 'ALL' ? 'var(--color-primary)' : 'transparent',
+              color: selectedRole === 'ALL' ? 'var(--color-on-primary)' : 'var(--color-text)',
+              borderColor: selectedRole === 'ALL' ? 'var(--color-primary)' : 'var(--color-muted)',
+            }}
+            onClick={() => setSelectedRole('ALL')}
+          >
+            ALL ROLES ({schedule.length})
+          </button>
+          {roles.map(role => {
+            const count = schedule.filter(e => (e.responsibility || '').toLowerCase().includes(role.toLowerCase())).length;
+            const isSelected = selectedRole.toLowerCase() === role.toLowerCase();
+            return (
+              <button
+                key={role}
+                style={{
+                  ...styles.pillBtn,
+                  backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
+                  color: isSelected ? 'var(--color-on-primary)' : 'var(--color-text)',
+                  borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-muted)',
+                }}
+                onClick={() => setSelectedRole(role)}
+              >
+                {role.toUpperCase()} ({count})
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Editor Modal */}
@@ -164,6 +357,46 @@ export default function TimelineManager({ schedule, onUpdate, isSyncing }: Timel
                     style={styles.textarea}
                   />
                 </div>
+
+                {(isLateNightTime(formState.startTime || '') || isLateNightTime(formState.endTime || '')) && (
+                  <div style={{ ...styles.fieldGroup, gridColumn: 'span 2' }}>
+                    <div style={styles.midnightAlertBox}>
+                      <div style={styles.midnightAlertHeader}>
+                        <Moon size={14} style={{ color: '#8b5cf6', marginRight: '0.35rem' }} />
+                        <span style={styles.midnightAlertTitle}>AFTER MIDNIGHT TIME DETECTED</span>
+                      </div>
+                      <p style={styles.midnightAlertDesc}>
+                        You entered a time between 12:00 AM and 4:00 AM. Is this moment at the end of the wedding night (e.g. 1:00 AM shuttle bus after midnight)?
+                      </p>
+                      <div style={styles.midnightToggleGroup}>
+                        <button
+                          type="button"
+                          style={{
+                            ...styles.midnightToggleBtn,
+                            backgroundColor: formState.isAfterMidnight !== false ? '#8b5cf6' : 'transparent',
+                            color: formState.isAfterMidnight !== false ? '#ffffff' : 'var(--color-text)',
+                            borderColor: formState.isAfterMidnight !== false ? '#8b5cf6' : 'var(--color-muted)'
+                          }}
+                          onClick={() => setFormState(prev => ({ ...prev, isAfterMidnight: true, eventDate: 'Next Day (+1)' }))}
+                        >
+                          🌙 YES — END OF NIGHT (+1 DAY)
+                        </button>
+                        <button
+                          type="button"
+                          style={{
+                            ...styles.midnightToggleBtn,
+                            backgroundColor: formState.isAfterMidnight === false ? 'var(--color-primary)' : 'transparent',
+                            color: formState.isAfterMidnight === false ? 'var(--color-on-primary)' : 'var(--color-text)',
+                            borderColor: formState.isAfterMidnight === false ? 'var(--color-primary)' : 'var(--color-muted)'
+                          }}
+                          onClick={() => setFormState(prev => ({ ...prev, isAfterMidnight: false, eventDate: 'Main Wedding Day' }))}
+                        >
+                          ☀️ NO — EARLY MORNING
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={styles.formActions}>
@@ -194,37 +427,57 @@ export default function TimelineManager({ schedule, onUpdate, isSyncing }: Timel
 
       {/* Vertical Timeline Layout */}
       <div style={styles.timelineList}>
-        {events.length === 0 ? (
-          <div style={styles.emptyState}>No schedule events found. Add your first timeline moment!</div>
+        {filteredEventsWithIndex.length === 0 ? (
+          <div style={styles.emptyState}>No schedule events found matching filters.</div>
         ) : (
-          events.map((event, index) => {
-            const isExpanded = expandedIndex === index;
+          filteredEventsWithIndex.map(({ event, originalIndex }, index) => {
+            const isExpanded = expandedIndex === originalIndex;
+            const isActiveNext = activeEventIndex === originalIndex;
             
             return (
-              <div key={index} style={styles.timelineItem}>
+              <div key={originalIndex} style={styles.timelineItem}>
                 {/* Left Side: Time node */}
                 <div style={styles.timelineTimeSide}>
-                  <span style={styles.timeText}>{event.startTime}</span>
+                  <span style={{
+                    ...styles.timeText,
+                    color: isActiveNext ? 'var(--color-primary)' : 'var(--color-text)',
+                    fontWeight: isActiveNext ? 700 : 600
+                  }}>{event.startTime}</span>
                   {event.endTime && <span style={styles.endTimeText}>to {event.endTime}</span>}
+                  {(event.isAfterMidnight || isLateNightTime(event.startTime)) && (
+                    <span style={styles.midnightBadge}>🌙 +1 DAY</span>
+                  )}
                 </div>
 
                 {/* Vertical line and dot */}
                 <div style={styles.lineConnector}>
-                  <div style={styles.timelineDot} />
-                  {index < events.length - 1 && <div style={styles.timelineVerticalLine} />}
+                  <div style={{
+                    ...styles.timelineDot,
+                    backgroundColor: isActiveNext ? '#cda250' : 'var(--color-primary)',
+                    transform: isActiveNext ? 'scale(1.3)' : 'scale(1)'
+                  }} />
+                  {index < filteredEventsWithIndex.length - 1 && <div style={styles.timelineVerticalLine} />}
                 </div>
 
                 {/* Right Side: Collapsible detail card */}
                 <div 
                   style={{
                     ...styles.timelineCard,
-                    borderColor: isExpanded ? 'var(--color-primary)' : 'var(--color-muted)',
+                    borderColor: isActiveNext ? '#cda250' : isExpanded ? 'var(--color-primary)' : 'var(--color-muted)',
+                    borderWidth: isActiveNext ? '2px' : '1px',
+                    boxShadow: isActiveNext ? '0 4px 12px rgba(205, 162, 80, 0.15)' : 'none'
                   }}
+                  onClick={() => setActiveEventIndex(originalIndex)}
                 >
                   {/* Card click header */}
-                  <div style={styles.cardHeader} onClick={() => toggleExpand(index)}>
+                  <div style={styles.cardHeader} onClick={() => toggleExpand(originalIndex)}>
                     <div style={styles.cardMainInfo}>
-                      <h3 style={styles.eventMomentTitle}>{event.eventMoment}</h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <h3 style={styles.eventMomentTitle}>{event.eventMoment}</h3>
+                        {isActiveNext && (
+                          <span style={styles.activeMomentBadge}>ACTIVE</span>
+                        )}
+                      </div>
                       {event.location && (
                         <div style={styles.locationContainer}>
                           <MapPin size={12} style={styles.cardIcon} />
@@ -236,7 +489,7 @@ export default function TimelineManager({ schedule, onUpdate, isSyncing }: Timel
                     <div style={styles.headerRightActions}>
                       <button 
                         style={styles.editCardBtn} 
-                        onClick={(e) => { e.stopPropagation(); startEdit(event, index); }}
+                        onClick={(e) => { e.stopPropagation(); startEdit(event, originalIndex); }}
                       >
                         <Edit2 size={12} />
                       </button>
@@ -282,13 +535,230 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: '1rem',
   },
+  midnightAlertBox: {
+    backgroundColor: '#f5f3ff',
+    border: '1px solid #c4b5fd',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '0.875rem',
+    marginTop: '0.5rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.4rem',
+  },
+  midnightAlertHeader: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  midnightAlertTitle: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 700,
+    color: '#6d28d9',
+    letterSpacing: '0.05em',
+  },
+  midnightAlertDesc: {
+    fontSize: '0.75rem',
+    color: '#4c1d95',
+    lineHeight: '1.4',
+  },
+  midnightToggleGroup: {
+    display: 'flex',
+    gap: '0.5rem',
+    marginTop: '0.25rem',
+    flexWrap: 'wrap',
+  },
+  midnightToggleBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    padding: '0.35rem 0.6rem',
+    borderRadius: 'var(--border-radius-sm)',
+    border: '1px solid var(--color-muted)',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  midnightBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    fontWeight: 700,
+    backgroundColor: '#f5f3ff',
+    color: '#6d28d9',
+    padding: '1px 5px',
+    borderRadius: '2px',
+    marginTop: '2px',
+    display: 'inline-block',
+  },
+  upNextCard: {
+    backgroundColor: 'var(--color-bg)',
+    border: '2px solid #cda250',
+    borderRadius: 'var(--border-radius-md)',
+    padding: '1.25rem',
+    boxShadow: '0 4px 12px rgba(205, 162, 80, 0.15)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+  },
+  upNextHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px dotted var(--color-muted)',
+    paddingBottom: '0.5rem',
+    flexWrap: 'wrap',
+    gap: '0.5rem',
+  },
+  upNextBadgeRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+  upNextBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 700,
+    backgroundColor: 'var(--color-highlight)',
+    color: '#cda250',
+    padding: '0.2rem 0.5rem',
+    borderRadius: 'var(--border-radius-sm)',
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
+  upNextIndexText: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.7rem',
+    color: 'var(--color-muted)',
+    fontWeight: 600,
+  },
+  upNextNavGroup: {
+    display: 'flex',
+    gap: '0.35rem',
+  },
+  navBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    padding: '0.3rem 0.5rem',
+    backgroundColor: 'transparent',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    color: 'var(--color-text)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.2rem',
+  },
+  upNextBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.35rem',
+  },
+  upNextTimeRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  upNextTime: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '1rem',
+    fontWeight: 700,
+    color: '#cda250',
+  },
+  upNextEndTime: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.8rem',
+    color: 'var(--color-muted)',
+  },
+  upNextMomentTitle: {
+    fontFamily: 'var(--font-serif)',
+    fontSize: '1.4rem',
+    fontWeight: 700,
+    color: 'var(--color-primary)',
+    margin: 0,
+  },
+  upNextMetaRow: {
+    display: 'flex',
+    gap: '1rem',
+    flexWrap: 'wrap',
+    marginTop: '0.25rem',
+  },
+  upNextMetaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.35rem',
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    color: 'var(--color-text)',
+  },
+  upNextNotes: {
+    fontSize: '0.8rem',
+    color: 'var(--color-muted)',
+    fontStyle: 'italic',
+    marginTop: '0.25rem',
+  },
+  filterSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+  },
+  searchInput: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.75rem',
+    padding: '0.5rem 0.75rem',
+    border: '1px solid var(--color-muted)',
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    width: '100%',
+  },
+  pillsRow: {
+    display: 'flex',
+    gap: '0.4rem',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  pillBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.65rem',
+    fontWeight: 600,
+    padding: '0.35rem 0.6rem',
+    borderRadius: 'var(--border-radius-sm)',
+    border: '1px solid var(--color-muted)',
+    cursor: 'pointer',
+    transition: 'var(--transition-smooth)',
+  },
+  activeMomentBadge: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.6rem',
+    fontWeight: 700,
+    backgroundColor: 'var(--color-highlight)',
+    color: '#cda250',
+    padding: '1px 5px',
+    borderRadius: '2px',
+  },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottom: '1px solid var(--color-muted)',
     paddingBottom: '0.75rem',
-    marginBottom: '1rem',
+  },
+  actionButtonGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  },
+  secondaryBtn: {
+    fontFamily: 'var(--font-mono)',
+    fontSize: '0.675rem',
+    fontWeight: 600,
+    backgroundColor: 'transparent',
+    color: 'var(--color-primary)',
+    border: '1px solid var(--color-primary)',
+    borderRadius: 'var(--border-radius-sm)',
+    padding: '0.4rem 0.6rem',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    transition: 'var(--transition-smooth)',
   },
   title: {
     fontFamily: 'var(--font-serif)',
