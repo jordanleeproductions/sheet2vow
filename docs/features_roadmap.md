@@ -1,53 +1,89 @@
-# Sheet2Vow Features and Roadmap
+# Sheet2Vow - Features and Roadmap
 
 ## Implemented Features
 
-### 1. Guest Registry (`GuestListManager`)
-- **View Switcher:** Navigate seamlessly between Grid, Seating, and Party Group views.
-- **Grouping & Summaries:** Organized view of Table and Party groupings with automatic headcount summaries.
-- **Export & Print:** Native support for interactive CSV exports and clean Print/PDF layouts.
+### 1. Dual Design System & Theme Engine
+- **Editorial Minimalist Theme (Default):** Calm, high-end editorial aesthetic featuring classic serif typography (`Playfair Display`), warm tones, and subtle borders.
+- **Muted Neo-Brutalism Theme (MongoDB / Gumroad Style):** Tactile, bold, geeky design system with 3px dark slate borders, zero-blur hard directional drop shadows, stark white card surfaces, `Geist Mono` typography for buttons/labels/badges, and custom accent color selection.
+- **Light & Dark Mode:** Global color theme toggle (`light` | `dark`) persisted in `localStorage` across all pages and components.
+- **Custom Primary Color Selector:** User-customizable accent green (`#00ED64` / `#13AA52` / custom hex) for highlighted metrics, badges, and controls.
 
-### 2. Day-Of Schedule (`TimelineManager`)
-- **"UP NEXT" Banner:** Featured banner highlighting the immediate next event with integrated navigation controls.
-- **Search & Filtering:** Real-time search combined with role-based filtering (e.g., *Catering*, *Photography*).
-- **Intelligent Late-Night Handling:** Automatic detection for late-night events (12:00 AM – 4:00 AM) including a confirmation UI prompt to ensure accurate date-tracking and chronological sorting (displays `🌙 +1 DAY` badge).
-- **Export & Print:** Native support for interactive CSV exports and clean Print/PDF layouts.
+### 2. Dashboard Summary (`DashboardMetrics`)
+- **Real-Time KPI Cards:** Overview of Total Guests, Attending Count, Total Budget, Paid Amount, and Balance Owing.
+- **Interactive Progress Bars:** Visual meters for Budget Allocation (% of total estimated cost) and Seating Capacity.
 
-### 3. Global Enhancements
-- **Print Styles:** Optimized `@media print` rules implemented to hide UI chrome and ensure clean paper exports across the app.
+### 3. Guest Registry (`GuestListManager`)
+- **View Switcher:** Grid View, Seating View (table arrangements), and Household/Party Group View.
+- **Instant RSVP Actions:** Quick-toggle RSVP buttons (ATTENDING, DECLINED, PENDING) with high-contrast color badges.
+- **Filtering & Search:** Real-time search by guest name, dietary restriction, or table arrangement.
+- **Export & Print:** Native CSV export and optimized `@media print` layout for printable guest lists.
+
+### 4. Budget Ledger (`BudgetLedgerManager`)
+- **Financial Tracking:** Estimated Cost vs. Actual Cost vs. Amount Paid vs. Balance Owing per item.
+- **Ledger Totals Card:** Highlighted summary card with green accent numbers and clear high-contrast labels.
+- **Payment Statuses:** Status tracking for Paid, Pending, and Overdue payments.
+- **Category Over-Budget Alerts:** Warning badges for items exceeding initial estimates.
+
+### 5. Day-Of Timeline (`TimelineManager`)
+- **"UP NEXT" Banner:** Featured top banner highlighting the immediate next timeline moment with quick step navigation.
+- **Role-Based Filtering:** Filter events by responsibility (*Bridal Party*, *Catering*, *Photography*, *Guests*).
+- **Late-Night Time Tracking:** Automatic detection for late-night events (12:00 AM – 4:00 AM) with `🌙 +1 DAY` badge.
+
+### 6. Vendor Directory (`VendorManager`)
+- **Directory Cards:** Comprehensive vendor contact info, category, phone number, email, and contract notes.
+- **Search & Filtering:** Search by vendor name, service category, or payment notes.
+
+### 7. Kanban Checklist (`KanbanBoard`)
+- **Task Columns:** Organize tasks by status (*To Do*, *In Progress*, *Done*).
+- **Priority Badges:** High, Medium, and Low priority tags with target due dates.
+
+### 8. Wedding Playlist & Music (`MusicManager`)
+- **Song Catalog:** Categorized playlist tracks (*Ceremony*, *Reception*, *First Dance*, *Must Play*).
+- **Banned Songs Section:** Separate `BANNED` (Do Not Play) tracks with deeper red badges and black borders.
+- **iTunes Audio Preview:** Live 30-second audio preview player with play/pause circular toggle.
+- **External Streaming Buttons:** Spotify and YouTube search buttons fixed at the bottom of each song card.
+- **Smart Sorting:** Automatic grouping of Banned songs at the bottom of the list when viewing "ALL SONGS".
 
 ---
 
-## Roadmap
+## Roadmap & Next Features
 
-### Up Next
-1. **Budget Ledger Tracking (`BudgetLedgerManager`)**
-   - Track estimated vs. actual costs.
-   - Categorize expenses and monitor payment schedules.
-   
-2. **Quick Preset Packs**
-   - Provide templates for common wedding timelines and budget breakdowns to speed up onboarding.
+### Phase 1: Onboarding & Setup Customization (Up Next)
 
-### Future Enhancements
+1. **Modular Navigation & Feature Toggles**
+   - **Module On/Off Switches:** Allow users during onboarding (and via Settings) to enable or disable individual modules (e.g., hide **Music Playlist**, **Vendors**, **Kanban**, or **Budget Ledger** if not needed).
+   - **Dynamic Nav Chrome:** Top navbar and dashboard widgets dynamically hide disabled modules to keep the interface minimal and focused.
+
+2. **Custom External Links & Platform Controls**
+   - **Streaming Platform Chooser:** Allow users to choose which streaming platform buttons appear on Music cards (e.g., toggle Spotify, YouTube, Apple Music, Tidal, or Soundcloud).
+   - **Custom Tab Naming & Ordering:** Allow users to rename navigation tabs (e.g., rename `[ LEDGER ]` to `[ EXPENSES ]` or `[ GUEST LIST ]` to `[ RSVPs ]`).
+
+3. **Onboarding Preset Packs**
+   - Provide ready-to-use template presets during setup (e.g. *Micro Wedding*, *Destination Wedding*, *Traditional Large Wedding*) pre-populating suggested timeline milestones and budget categories.
+
+### Phase 2: Public Guest Portal & Sharing
+
+1. **Guest-Facing RSVP Portal**
+   - Generate a lightweight, read-only public link for guests to submit their RSVP and dietary requirements directly into the planner without master edit access.
+
+2. **Shareable Timeline for Vendors & Bridal Party**
+   - Dedicated print/digital view of the Day-Of Timeline filtered by specific roles (e.g. a shareable link specifically for the Photographer or Caterer).
+
+### Phase 3: Advanced Integrations & Automations
+
 | Feature | Description |
 |---|---|
-| Vendor Management Expansion | Finalize Vendor directory views, contact cards, and contract linking. |
-| UI/UX Aesthetics | Continue refinement of modern visual aesthetics and micro-animations. |
-| Advanced Syncing | Improve resilience and error handling for the two-way sync with Google Sheets. |
-| Google Auth Integration | Add Google authentication to allow users to sync data to their Google Drive. |
-| Template Google Sheet | Keep a template Google Sheet in the repo for schema auditing and synchronization. |
-### Suggested Micro‑Animations
+| **Google Sheet Schema Presets** | One-click Google Sheet template cloning directly to user's Google Drive. |
+| **Google Auth & Drive Storage** | Direct OAuth integration with Google Drive to auto-save and auto-sync changes. |
+| **Offline Cache & PWA Support** | Progressive Web App support enabling offline timeline access on the wedding day. |
 
-| Animation | Where to Use | Description |
+---
+
+## Micro-Animations & Interactivity
+
+| Animation | Location | Description |
 |---|---|---|
-| **Fade‑In on Load** | Page & component entrance | Softly fades elements into view, creating a gentle entry experience. |
-| **Slide‑Up Staggered List** | Guest list, timeline events | Items appear sequentially from bottom to top, emphasizing order and improving readability. |
-| **Hover Scale + Shadow** | Buttons, cards, vendor tiles | Slight scaling (1.05×) and shadow on hover to indicate interactivity. |
-| **Ripple Click Effect** | Action buttons (Add Guest, Save, Export) | Material‑style ripple providing tactile feedback. |
-| **Badge Pulse** | Late‑night "🌙 +1 DAY" badge | Subtle pulse to draw attention to special‑time events without being obtrusive. |
-| **Progress Bar Fill** | CSV export / sync operations | Animated fill indicating progress, enhancing perceived performance. |
-| **Slide‑In Modal** | Edit dialogs, auth login | Modal slides from the right with a dimmed backdrop, keeping context. |
-| **Icon Spin on Refresh** | Data sync button | Small spin animation signaling refresh action. |
-| **Toast Slide‑Down** | Success / error notifications | Toast slides down from top, stays briefly, then fades out. |
-
-These micro‑animations are lightweight, CSS‑only (or with minimal JS) and align with the modern premium aesthetic we’re targeting. Implement them using `@keyframes` in `globals.css` and apply via utility classes for consistency.
+| **Theme Transition** | Global (`documentElement`) | Smooth 0.2s cross-fade when switching between Editorial and Neo-Brutalism themes. |
+| **Active Moment Pulse** | Timeline "UP NEXT" Banner | Soft pulsing highlight on the active moment badge. |
+| **Card Hover Lift** | Guest / Music / Vendor Cards | Slight `translate-y (-2px)` with shadow offset on hover. |
+| **Audio Spinner** | Music Preview Player | Smooth rotating loading indicator while fetching iTunes audio previews. |
