@@ -36,14 +36,33 @@ body {
 
 /* Base Typography rules */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-serif);
+  font-family: var(--font-header, var(--font-serif));
   color: var(--color-primary);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
 
+[data-style='neo-brutalism'] h1,
+[data-style='neo-brutalism'] h2,
+[data-style='neo-brutalism'] h3,
+[data-style='neo-brutalism'] h4,
+[data-style='neo-brutalism'] h5,
+[data-style='neo-brutalism'] h6 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
 code, pre, .font-mono {
   font-family: var(--font-mono);
+}
+
+[data-style='neo-brutalism'] code,
+[data-style='neo-brutalism'] pre {
+  font-family: var(--font-mono);
+  border: 1px solid var(--color-muted);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--color-bg);
+  padding: 0.15rem 0.35rem;
 }
 
 .font-serif {
@@ -52,6 +71,27 @@ code, pre, .font-mono {
 
 .font-sans {
   font-family: var(--font-sans);
+}
+
+/* Neo-Brutalism Content Panel Surface Styling */
+[data-style='neo-brutalism'] article,
+[data-style='neo-brutalism'] section,
+[data-style='neo-brutalism'] .tabContent > div,
+[data-style='neo-brutalism'] [class*="card"],
+[data-style='neo-brutalism'] [class*="Card"],
+[data-style='neo-brutalism'] [class*="panel"],
+[data-style='neo-brutalism'] [class*="Panel"],
+[data-style='neo-brutalism'] [class*="containerBox"],
+[data-style='neo-brutalism'] [class*="tableWrapper"] {
+  background-color: var(--color-surface, #ffffff);
+}
+
+/* Preserve Header, Nav, and Nav Button transparency */
+[data-style='neo-brutalism'] header,
+[data-style='neo-brutalism'] nav,
+[data-style='neo-brutalism'] nav button,
+[data-style='neo-brutalism'] .navbar button {
+  background-color: transparent;
 }
 
 /* Responsive container */

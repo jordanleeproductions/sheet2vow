@@ -108,7 +108,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1rem',
   },
   kpiCard: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1.25rem',
@@ -141,7 +141,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '0.02em',
   },
   barPanel: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1.5rem',

@@ -593,7 +593,7 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
 
 const styles: Record<string, React.CSSProperties> = {
   meterCard: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1.25rem',
@@ -826,7 +826,7 @@ const styles: Record<string, React.CSSProperties> = {
     overflowX: 'auto',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     boxShadow: 'var(--box-shadow-subtle)',
   },
   table: {
@@ -897,7 +897,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1rem',
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     boxShadow: 'var(--box-shadow-subtle)',
     display: 'flex',
     flexDirection: 'column',
@@ -1027,7 +1027,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1rem',
   },
   card: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1rem',

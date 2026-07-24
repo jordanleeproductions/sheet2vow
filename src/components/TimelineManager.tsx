@@ -589,7 +589,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'inline-block',
   },
   upNextCard: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '2px solid #cda250',
     borderRadius: 'var(--border-radius-md)',
     padding: '1.25rem',
@@ -837,7 +837,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timelineCard: {
     flex: 1,
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     boxShadow: 'var(--box-shadow-subtle)',

@@ -516,7 +516,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1rem',
   },
   card: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     borderRadius: 'var(--border-radius-md)',
     boxShadow: 'var(--box-shadow-subtle)',
     border: '1px solid var(--color-muted)',

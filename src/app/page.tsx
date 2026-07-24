@@ -33,6 +33,7 @@ export default function Sheet2VowDashboard() {
   };
 
   // Theme and Settings
+  const [styleTheme, setStyleTheme] = useState<'editorial' | 'neo-brutalism'>('editorial');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [showSettings, setShowSettings] = useState<boolean>(false);
@@ -54,6 +55,7 @@ export default function Sheet2VowDashboard() {
     const savedMock = localStorage.getItem('s2v_is_mock');
     const savedName = localStorage.getItem('s2v_wedding_name');
     const savedDate = localStorage.getItem('s2v_wedding_date');
+    const savedStyleTheme = localStorage.getItem('s2v_style_theme');
     const savedTheme = localStorage.getItem('s2v_theme');
     const savedColor = localStorage.getItem('s2v_primary_color');
     const savedFolder = localStorage.getItem('s2v_drive_folder');
@@ -64,23 +66,42 @@ export default function Sheet2VowDashboard() {
     if (savedMock === 'false') setIsMockMode(false);
     if (savedName) setWeddingName(savedName);
     if (savedDate) setWeddingDate(savedDate);
+    if (savedStyleTheme === 'editorial' || savedStyleTheme === 'neo-brutalism') setStyleTheme(savedStyleTheme);
     if (savedTheme === 'light' || savedTheme === 'dark') setTheme(savedTheme);
     if (savedColor) setPrimaryColor(savedColor);
     if (savedFolder) setDriveFolder(savedFolder);
   }, []);
 
-  // Apply theme when it changes
+  // Apply style theme and color mode when they change
   useEffect(() => {
+    document.documentElement.setAttribute('data-style', styleTheme);
     document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('s2v_style_theme', styleTheme);
     localStorage.setItem('s2v_theme', theme);
+
+    // Reset inline custom property overrides before applying
+    document.documentElement.style.removeProperty('--color-primary');
+    document.documentElement.style.removeProperty('--color-highlight');
+    document.documentElement.style.removeProperty('--color-gold-dark');
+    document.documentElement.style.removeProperty('--color-on-primary');
+
     if (primaryColor) {
-      document.documentElement.style.setProperty('--color-primary', primaryColor);
+      if (styleTheme === 'neo-brutalism') {
+        // Customize Green accent colors in Neo-Brutalism without changing structural black/slate
+        document.documentElement.style.setProperty('--color-highlight', primaryColor);
+        document.documentElement.style.setProperty('--color-gold-dark', primaryColor);
+        document.documentElement.style.setProperty('--color-on-primary', primaryColor);
+        if (theme === 'dark') {
+          document.documentElement.style.setProperty('--color-primary', primaryColor);
+        }
+      } else {
+        document.documentElement.style.setProperty('--color-primary', primaryColor);
+      }
       localStorage.setItem('s2v_primary_color', primaryColor);
     } else {
-      document.documentElement.style.removeProperty('--color-primary');
       localStorage.removeItem('s2v_primary_color');
     }
-  }, [theme, primaryColor]);
+  }, [styleTheme, theme, primaryColor]);
 
   // Fetch data whenever spreadsheetId changes or on refresh
   useEffect(() => {
@@ -274,18 +295,74 @@ export default function Sheet2VowDashboard() {
             {showSettings && (
               <div style={styles.settingsDropdown}>
                 <div style={styles.settingsSection}>
-                  <label style={styles.settingsLabel}>THEME</label>
+                  <label style={styles.settingsLabel}>DESIGN STYLE</label>
                   <div style={styles.themeToggle}>
-                    <button style={{ ...styles.themeBtn, fontWeight: theme === 'light' ? 'bold' : 'normal', backgroundColor: theme === 'light' ? 'var(--color-primary)' : 'transparent', color: theme === 'light' ? '#fff' : 'var(--color-text)' }} onClick={() => setTheme('light')}>LIGHT</button>
-                    <button style={{ ...styles.themeBtn, fontWeight: theme === 'dark' ? 'bold' : 'normal', backgroundColor: theme === 'dark' ? 'var(--color-primary)' : 'transparent', color: theme === 'dark' ? '#fff' : 'var(--color-text)' }} onClick={() => setTheme('dark')}>DARK</button>
+                    <button
+                      style={{
+                        ...styles.themeBtn,
+                        fontWeight: styleTheme === 'editorial' ? 'bold' : 'normal',
+                        backgroundColor: styleTheme === 'editorial' ? 'var(--color-primary)' : 'transparent',
+                        color: styleTheme === 'editorial' ? 'var(--color-on-primary)' : 'var(--color-text)'
+                      }}
+                      onClick={() => setStyleTheme('editorial')}
+                    >
+                      EDITORIAL
+                    </button>
+                    <button
+                      style={{
+                        ...styles.themeBtn,
+                        fontWeight: styleTheme === 'neo-brutalism' ? 'bold' : 'normal',
+                        backgroundColor: styleTheme === 'neo-brutalism' ? 'var(--color-primary)' : 'transparent',
+                        color: styleTheme === 'neo-brutalism' ? 'var(--color-on-primary)' : 'var(--color-text)'
+                      }}
+                      onClick={() => setStyleTheme('neo-brutalism')}
+                    >
+                      BRUTALISM
+                    </button>
                   </div>
                 </div>
                 <div style={styles.settingsSection}>
-                  <label style={styles.settingsLabel}>PRIMARY COLOR</label>
+                  <label style={styles.settingsLabel}>COLOR MODE</label>
+                  <div style={styles.themeToggle}>
+                    <button
+                      style={{
+                        ...styles.themeBtn,
+                        fontWeight: theme === 'light' ? 'bold' : 'normal',
+                        backgroundColor: theme === 'light' ? 'var(--color-primary)' : 'transparent',
+                        color: theme === 'light' ? 'var(--color-on-primary)' : 'var(--color-text)'
+                      }}
+                      onClick={() => setTheme('light')}
+                    >
+                      LIGHT
+                    </button>
+                    <button
+                      style={{
+                        ...styles.themeBtn,
+                        fontWeight: theme === 'dark' ? 'bold' : 'normal',
+                        backgroundColor: theme === 'dark' ? 'var(--color-primary)' : 'transparent',
+                        color: theme === 'dark' ? 'var(--color-on-primary)' : 'var(--color-text)'
+                      }}
+                      onClick={() => setTheme('dark')}
+                    >
+                      DARK
+                    </button>
+                  </div>
+                </div>
+                <div style={styles.settingsSection}>
+                  <label style={styles.settingsLabel}>
+                    {styleTheme === 'neo-brutalism' ? 'ACCENT COLOR (GREEN)' : 'PRIMARY COLOR'}
+                  </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <input
                       type="color"
-                      value={primaryColor || (theme === 'dark' ? '#f5f5f5' : '#0d1b2a')}
+                      value={
+                        primaryColor ||
+                        (styleTheme === 'neo-brutalism'
+                          ? '#00ED64'
+                          : theme === 'dark'
+                          ? '#f5f5f5'
+                          : '#0d1b2a')
+                      }
                       onChange={(e) => setPrimaryColor(e.target.value)}
                       style={{ padding: 0, border: 'none', width: '24px', height: '24px', cursor: 'pointer', background: 'transparent' }}
                     />

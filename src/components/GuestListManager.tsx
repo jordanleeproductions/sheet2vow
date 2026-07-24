@@ -165,15 +165,15 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
       '#e6b800'; // dark gold/amber
 
     return (
-      <div key={guest.guestId} style={styles.card}>
+      <div key={guest.guestId} style={styles.card} className="anim-slide-up anim-hover-scale anim-ripple">
         <div style={styles.cardHeader}>
           <div style={styles.cardMeta}>
-            <span style={styles.monoBadge}>{guest.partyGroup.toUpperCase()}</span>
+            <span style={styles.upNextBadge} className="anim-badge-pulse">{guest.partyGroup.toUpperCase()}</span>
             <span style={{ ...styles.monoBadge, backgroundColor: 'var(--color-highlight)' }}>
               {guest.ageCategory.toUpperCase()}
             </span>
           </div>
-          <button style={styles.editBtn} onClick={() => startEdit(guest)}>
+          <button style={styles.editBtn} className="anim-ripple" onClick={() => startEdit(guest)}>
             <Edit2 size={12} />
           </button>
         </div>
@@ -237,7 +237,7 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
   return (
     <div style={styles.container}>
       {/* Header Panel */}
-      <div style={styles.header}>
+      <div style={styles.upNextCard} className="anim-fade-in">
         <h2 style={styles.title}>Guest Registry</h2>
         <div style={styles.headerActions}>
           <div style={styles.viewToggle}>
@@ -633,7 +633,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '0.5rem',
   },
   clusterCard: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1.25rem',
@@ -735,7 +735,7 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: '0.5rem',
   },
   card: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '1.25rem',

@@ -643,7 +643,7 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
   },
   taskCard: {
-    backgroundColor: 'var(--color-bg)',
+    backgroundColor: 'var(--color-surface, #ffffff)',
     border: '1px solid var(--color-muted)',
     borderRadius: 'var(--border-radius-md)',
     padding: '0.875rem',

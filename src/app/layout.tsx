@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Roboto_Mono, Inter } from "next/font/google";
+import { Playfair_Display, Roboto_Mono, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -12,8 +12,14 @@ const robotoMono = Roboto_Mono({
   variable: "--font-mono-google",
 });
 
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-google",
+});
+
 const inter = Inter({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   variable: "--font-sans-google",
 });
 
@@ -30,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${playfair.variable} ${robotoMono.variable}`}
+      className={`${inter.variable} ${playfair.variable} ${robotoMono.variable} ${jetbrainsMono.variable}`}
     >
       <body>{children}</body>
     </html>
