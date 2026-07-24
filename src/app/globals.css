@@ -58,11 +58,29 @@ code, pre, .font-mono {
 
 [data-style='neo-brutalism'] code,
 [data-style='neo-brutalism'] pre {
-  font-family: var(--font-mono);
+  font-family: var(--font-geist-mono, var(--font-mono));
   border: 1px solid var(--color-muted);
   border-radius: var(--border-radius-sm);
   background-color: var(--color-bg);
   padding: 0.15rem 0.35rem;
+}
+
+/* Neo-Brutalism Label & Button Geist Mono Font Override */
+[data-style='neo-brutalism'] button,
+[data-style='neo-brutalism'] label,
+[data-style='neo-brutalism'] input,
+[data-style='neo-brutalism'] select,
+[data-style='neo-brutalism'] textarea,
+[data-style='neo-brutalism'] .mono-badge,
+[data-style='neo-brutalism'] [class*="Label"],
+[data-style='neo-brutalism'] [class*="label"],
+[data-style='neo-brutalism'] [class*="Btn"],
+[data-style='neo-brutalism'] [class*="btn"],
+[data-style='neo-brutalism'] [class*="Badge"],
+[data-style='neo-brutalism'] [class*="badge"],
+[data-style='neo-brutalism'] [class*="Tag"],
+[data-style='neo-brutalism'] [class*="tag"] {
+  font-family: var(--font-geist-mono, var(--font-mono)) !important;
 }
 
 .font-serif {
@@ -92,6 +110,60 @@ code, pre, .font-mono {
 [data-style='neo-brutalism'] nav button,
 [data-style='neo-brutalism'] .navbar button {
   background-color: transparent;
+}
+
+/* Yellow background text contrast rule for Neo-Brutalism */
+[data-style='neo-brutalism'] [style*="backgroundColor: #f59e0b"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #cda250"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #FFC72C"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #fde047"],
+[data-style='neo-brutalism'] [style*="background-color: #f59e0b"],
+[data-style='neo-brutalism'] [style*="background-color: #cda250"],
+[data-style='neo-brutalism'] [style*="background-color: #FFC72C"],
+[data-style='neo-brutalism'] [style*="background-color: #fde047"] {
+  color: #000000 !important;
+}
+
+/* Green background text contrast rule for Neo-Brutalism */
+[data-style='neo-brutalism'] [style*="backgroundColor: var(--color-highlight)"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #00ED64"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #13AA52"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #10b981"],
+[data-style='neo-brutalism'] [style*="backgroundColor: #4ade80"],
+[data-style='neo-brutalism'] [style*="background-color: var(--color-highlight)"],
+[data-style='neo-brutalism'] [style*="background-color: #00ED64"],
+[data-style='neo-brutalism'] [style*="background-color: #13AA52"],
+[data-style='neo-brutalism'] [style*="background-color: #10b981"],
+[data-style='neo-brutalism'] [style*="background-color: #4ade80"] {
+  color: #000000 !important;
+}
+
+/* Neo-Brutalism Dark mode muted text contrast rule */
+[data-style='neo-brutalism'][data-theme='dark'] [style*="color: var(--color-muted)"],
+[data-style='neo-brutalism'][data-theme='dark'] [style*="color:var(--color-muted)"] {
+  color: #ffffff !important;
+}
+
+/* Ledger Totals card white font override for labels & headers */
+.totalCard h3,
+.totalCard .cardLabel {
+  color: #ffffff !important;
+}
+
+/* Red button black text override for Neo-Brutalism */
+[data-style='neo-brutalism'] [class*="deleteBtn"],
+[data-style='neo-brutalism'] button[style*="backgroundColor: #ef4444"],
+[data-style='neo-brutalism'] button[style*="background-color: #ef4444"],
+[data-style='neo-brutalism'] button[style*="backgroundColor: #f87171"],
+[data-style='neo-brutalism'] button[style*="background-color: #f87171"] {
+  color: #000000 !important;
+}
+
+/* Circular Play Button shadow override for Neo-Brutalism */
+[data-style='neo-brutalism'] [class*="playIconBtn"],
+[data-style='neo-brutalism'] button[title*="Preview"],
+[data-style='neo-brutalism'] button[title*="Pause"] {
+  box-shadow: none !important;
 }
 
 /* Responsive container */

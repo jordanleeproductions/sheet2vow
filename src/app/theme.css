@@ -68,8 +68,9 @@
   --color-gold-dark: #13AA52; /* Deep Forest Green Accent */
   --color-white: #ffffff;
 
-  /* Fonts (Heavy Geometric Sans-Serif Headers + JetBrains Mono) */
-  --font-mono: var(--font-jetbrains-google), var(--font-mono-google), 'JetBrains Mono', 'Roboto Mono', monospace;
+  /* Fonts (Heavy Geometric Sans-Serif Headers + Geist Mono) */
+  --font-geist-mono: var(--font-geist-mono-google), "Geist Mono", "Geist Mono Fallback", monospace;
+  --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-sans-google), 'Inter', sans-serif;
   --font-sans: var(--font-sans-google), 'Inter', -apple-system, sans-serif;
   --font-header: var(--font-sans);
@@ -91,7 +92,7 @@
   --color-primary: #13AA52; /* Deep Forest Green Accent */
   --color-on-primary: #ffffff; /* White text on primary buttons */
   --color-text: #F4F4F0; /* Off-White Text */
-  --color-muted: #334155; /* Dark Slate Gray borders */
+  --color-muted: #ffffff; /* High-contrast white text for muted labels & tags */
   --color-highlight: #00ED64; /* Electric Lime Accent */
   --color-gold-dark: #00ED64;
   --color-white: #121824;

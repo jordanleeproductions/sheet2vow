@@ -550,7 +550,7 @@ export default function Sheet2VowDashboard() {
 
           {/* Target Wedding Milestone Header */}
           <div style={styles.weddingTitleHeader}>
-            <h2 style={styles.weddingNameText}>{weddingName.toUpperCase()}</h2>
+            <h2 className="wedding-title" style={styles.weddingNameText}>{weddingName.toUpperCase()}</h2>
             <div style={styles.weddingMilestoneDate}>{getCountdown()}</div>
           </div>
 
@@ -889,11 +889,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '2rem',
   },
   weddingNameText: {
-    fontFamily: 'var(--font-serif)',
+    fontFamily: 'var(--font-header, var(--font-serif))',
     fontSize: '2rem',
     color: 'var(--color-primary)',
-    fontWeight: 600,
-    letterSpacing: '0.02em',
+    fontWeight: 800,
+    letterSpacing: '-0.03em',
     marginBottom: '0.25rem',
   },
   weddingMilestoneDate: {

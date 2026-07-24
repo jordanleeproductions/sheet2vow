@@ -139,7 +139,7 @@ export default function KanbanBoard({ tasks, onUpdate, isSyncing }: KanbanBoardP
   const getPriorityColor = (priority: string) => {
     switch (priority.toLowerCase()) {
       case 'high': return { bg: '#fee2e2', text: '#ef4444' };
-      case 'medium': return { bg: 'var(--color-highlight)', text: '#cda250' };
+      case 'medium': return { bg: 'var(--color-highlight)', text: '#000000' };
       default: return { bg: '#f1f1f1', text: 'var(--color-muted)' };
     }
   };
@@ -827,7 +827,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     padding: '0.5rem 1rem',
     backgroundColor: '#ef4444',
-    color: 'var(--color-on-primary)',
+    color: '#000000',
     border: 'none',
     borderRadius: 'var(--border-radius-sm)',
     cursor: 'pointer',

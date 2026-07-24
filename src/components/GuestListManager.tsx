@@ -213,9 +213,36 @@ export default function GuestListManager({ guests, onUpdate, isSyncing }: GuestL
           <div style={styles.rsvpButtonGroup}>
             {(['No Response', 'Attending', 'Declined'] as RSVPStatus[]).map((status) => {
               const isSelected = guest.rsvpStatus === status;
-              const btnStyle = isSelected 
-                ? { ...styles.rsvpToggleBtn, backgroundColor: rsvpColor, color: rsvpColor === 'var(--color-primary)' ? 'var(--color-on-primary)' : '#fff', border: `1px solid ${rsvpColor}` }
-                : styles.rsvpToggleBtn;
+              let btnStyle: React.CSSProperties = styles.rsvpToggleBtn;
+
+              if (isSelected) {
+                if (status === 'Declined') {
+                  btnStyle = {
+                    ...styles.rsvpToggleBtn,
+                    backgroundColor: '#f87171',
+                    color: '#000000',
+                    border: '2px solid var(--color-muted, #121824)',
+                    fontWeight: 700,
+                  };
+                } else if (status === 'Attending') {
+                  btnStyle = {
+                    ...styles.rsvpToggleBtn,
+                    backgroundColor: '#4ade80',
+                    color: '#000000',
+                    border: '2px solid var(--color-muted, #121824)',
+                    fontWeight: 700,
+                  };
+                } else {
+                  // No Response / Pending / Yellow
+                  btnStyle = {
+                    ...styles.rsvpToggleBtn,
+                    backgroundColor: '#fde047',
+                    color: '#000000',
+                    border: '2px solid var(--color-muted, #121824)',
+                    fontWeight: 700,
+                  };
+                }
+              }
 
               return (
                 <button 

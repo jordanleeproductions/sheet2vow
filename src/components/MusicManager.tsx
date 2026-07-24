@@ -35,6 +35,14 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
       (song.listType || '').toUpperCase() === filterPill.toUpperCase();
 
     return matchesSearch && matchesFilterPill;
+  }).sort((a, b) => {
+    if (filterPill === 'ALL') {
+      const aIsBanned = a.listType === 'Do Not Play';
+      const bIsBanned = b.listType === 'Do Not Play';
+      if (aIsBanned && !bIsBanned) return 1;
+      if (!aIsBanned && bIsBanned) return -1;
+    }
+    return 0;
   });
 
   // Cleanup audio on unmount
@@ -175,7 +183,6 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
 
     return (
       <div style={styles.externalLinksGroup}>
-        {renderSamplePlayer(item)}
         <a 
           href={spotifyUrl} 
           target="_blank" 
@@ -209,9 +216,6 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
     );
   };
 
-  const playListSongs = music.filter(s => s.listType !== 'Do Not Play');
-  const doNotPlaySongs = music.filter(s => s.listType === 'Do Not Play');
-
   return (
     <div style={styles.container}>
       {/* Header */}
@@ -226,7 +230,7 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
       <div style={styles.filterSection}>
         <input
           type="text"
-          placeholder="SEARCH SONG TITLE, ARTIST, OR NOTES..."
+          placeholder="SEARCH TITLE, ARTIST, OR NOTES..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={styles.searchInput}
@@ -246,7 +250,7 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
               style={{
                 ...styles.pillBtn,
                 backgroundColor: filterPill === pill.id ? (pill.id === 'Do Not Play' ? '#ef4444' : 'var(--color-primary)') : 'transparent',
-                color: filterPill === pill.id ? 'var(--color-on-primary)' : 'var(--color-text)',
+                color: filterPill === pill.id ? (pill.id === 'Do Not Play' ? '#000000' : 'var(--color-on-primary)') : 'var(--color-text)',
                 borderColor: filterPill === pill.id ? (pill.id === 'Do Not Play' ? '#ef4444' : 'var(--color-primary)') : 'var(--color-muted)',
               }}
               onClick={() => setFilterPill(pill.id)}
@@ -265,16 +269,16 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
               key={item.songId} 
               style={{
                 ...styles.card,
-                borderColor: isBanned ? '#fee2e2' : 'var(--color-muted)',
-                backgroundColor: isBanned ? '#fff5f5' : 'var(--color-bg)'
+                borderColor: 'var(--color-muted)',
+                backgroundColor: isBanned ? '#fff5f5' : 'var(--color-surface, #ffffff)'
               }}
             >
               <div style={styles.cardHeader}>
                 <div style={styles.cardMeta}>
                   <span style={{
                     ...styles.categoryBadge,
-                    backgroundColor: isBanned ? '#fee2e2' : '#eef2f7',
-                    color: isBanned ? '#ef4444' : 'var(--color-primary)'
+                    backgroundColor: isBanned ? '#ef4444' : 'var(--color-highlight, #00ED64)',
+                    color: '#000000'
                   }}>
                     {isBanned ? 'BANNED' : item.listType.toUpperCase()}
                   </span>
@@ -289,22 +293,31 @@ export default function MusicManager({ music, onUpdate, isSyncing }: MusicManage
                 </div>
               </div>
               
-              <div style={styles.cardBodyRow}>
-                <div style={styles.cardLeftCol}>
-                  <h4 style={{ ...styles.songTitle, color: isBanned ? '#7f1d1d' : 'var(--color-primary)' }}>{item.title}</h4>
-                  <p style={{ ...styles.songArtist, color: isBanned ? '#991b1b' : 'var(--color-muted)' }}>by {item.artist}</p>
+              <div style={styles.cardBodyContent}>
+                {/* Row 1: Title & Artist on Left, Play Button on Right */}
+                <div style={styles.songMainRow}>
+                  <div style={styles.songInfoCol}>
+                    <h4 style={{ ...styles.songTitle, color: isBanned ? '#7f1d1d' : 'var(--color-primary)' }}>{item.title}</h4>
+                    <p style={{ ...styles.songArtist, color: isBanned ? '#991b1b' : 'var(--color-muted)' }}>by {item.artist}</p>
+                  </div>
+                  <div style={styles.playButtonCol}>
+                    {renderSamplePlayer(item)}
+                  </div>
                 </div>
-                
-                <div style={styles.cardRightCol}>
-                  {item.notes && (
-                    <p style={{
-                      ...styles.songNotes,
-                      color: isBanned ? '#991b1b' : 'var(--color-muted)',
-                      backgroundColor: isBanned ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.03)'
-                    }}>"{item.notes}"</p>
-                  )}
-                  {renderExternalLinks(item)}
-                </div>
+
+                {/* Row 2: Comments / Notes as a new row */}
+                {item.notes && (
+                  <p style={{
+                    ...styles.songNotes,
+                    color: isBanned ? '#991b1b' : 'var(--color-muted)',
+                    backgroundColor: isBanned ? 'rgba(239,68,68,0.1)' : 'rgba(0,0,0,0.03)'
+                  }}>"{item.notes}"</p>
+                )}
+              </div>
+
+              {/* Fixed Bottom Card Footer for Spotify & YouTube */}
+              <div style={styles.cardFooter}>
+                {renderExternalLinks(item)}
               </div>
             </div>
           );
@@ -440,25 +453,28 @@ const styles: Record<string, React.CSSProperties> = {
   externalLinksGroup: {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.4rem',
+    gap: '0.5rem',
     flexWrap: 'wrap',
   },
   streamLinkBtn: {
     fontFamily: 'var(--font-mono)',
-    fontSize: '0.6rem',
+    fontSize: '0.65rem',
     fontWeight: 600,
-    color: 'var(--color-primary)',
-    backgroundColor: '#f1f5f9',
-    padding: '0.2rem 0.4rem',
-    borderRadius: 'var(--border-radius-sm)',
-    textDecoration: 'none',
+    padding: '0.25rem 0.5rem',
     border: '1px solid var(--color-muted)',
-  },
-  customLinkBtn: {
+    borderRadius: 'var(--border-radius-sm)',
+    backgroundColor: 'var(--color-bg)',
+    color: 'var(--color-text)',
+    textDecoration: 'none',
     display: 'inline-flex',
     alignItems: 'center',
+    transition: 'var(--transition-smooth)',
+  },
+  customLinkBtn: {
+    padding: '0.25rem',
     color: 'var(--color-primary)',
-    padding: '0.2rem',
+    display: 'inline-flex',
+    alignItems: 'center',
   },
   header: {
     display: 'flex',
@@ -555,23 +571,28 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0',
     display: 'flex',
   },
-  cardBodyRow: {
+  cardBodyContent: {
+    display: 'flex',
+    flexDirection: 'column',
+    flex: 1,
+    gap: '0.5rem',
+  },
+  songMainRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'stretch',
-    gap: '0.75rem',
-    flex: 1,
+    alignItems: 'center',
+    gap: '0.5rem',
   },
-  cardLeftCol: {
+  songInfoCol: {
     display: 'flex',
     flexDirection: 'column',
     flex: 1,
   },
-  cardRightCol: {
+  playButtonCol: {
     display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    maxWidth: '50%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
   songTitle: {
     fontFamily: 'var(--font-serif)',
@@ -591,28 +612,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     color: 'var(--color-text)',
     fontStyle: 'italic',
-    margin: '0 0 0.5rem 0',
-    padding: '0.35rem',
+    margin: '0.25rem 0 0 0',
+    padding: '0.35rem 0.5rem',
     backgroundColor: 'rgba(0,0,0,0.02)',
     borderRadius: '4px',
-    textAlign: 'right',
+    textAlign: 'left',
   },
-  externalLink: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '0.4rem 0.75rem',
-    border: '1px solid var(--color-primary)',
-    borderRadius: '20px',
-    color: 'var(--color-primary)',
-    textDecoration: 'none',
-    fontSize: '0.75rem',
-    fontFamily: 'var(--font-mono)',
-    fontWeight: 600,
+  cardFooter: {
     marginTop: 'auto',
-    alignSelf: 'flex-end',
+    paddingTop: '0.75rem',
+    borderTop: '1px solid var(--color-muted)',
+    display: 'flex',
+    alignItems: 'center',
   },
   playIconBtn: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     width: '32px',
@@ -622,8 +636,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: 'var(--color-on-primary)',
     border: 'none',
     cursor: 'pointer',
-    marginTop: 'auto',
-    boxShadow: 'var(--box-shadow-subtle)',
+    boxShadow: 'none',
     transition: 'var(--transition-smooth)',
   },
   emptyState: {

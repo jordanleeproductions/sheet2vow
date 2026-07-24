@@ -378,23 +378,23 @@ export default function BudgetLedgerManager({ budget, onUpdate, isSyncing }: Bud
         /* Card View Layout */
         <div style={styles.cardGrid}>
           {/* Ledger Total Card */}
-          <div style={{ ...styles.card, ...styles.totalCard }}>
-            <h3 style={{ ...styles.cardCategory, color: 'var(--color-on-primary)' }}>LEDGER TOTALS</h3>
+          <div style={{ ...styles.card, ...styles.totalCard }} className="totalCard">
+            <h3 style={{ ...styles.categoryCell, fontFamily: 'var(--font-header, var(--font-serif))', fontSize: '1.25rem', color: '#ffffff' }}>LEDGER TOTALS</h3>
             <div style={styles.cardBody}>
               <div style={styles.cardRow}>
-                <span style={styles.cardLabel}>ESTIMATED</span>
+                <span style={{ ...styles.cardLabel, color: '#ffffff' }}>ESTIMATED</span>
                 <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalEstimate.toLocaleString()}</span>
               </div>
               <div style={styles.cardRow}>
-                <span style={styles.cardLabel}>ACTUAL</span>
+                <span style={{ ...styles.cardLabel, color: '#ffffff' }}>ACTUAL</span>
                 <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalActual.toLocaleString()}</span>
               </div>
               <div style={styles.cardRow}>
-                <span style={styles.cardLabel}>PAID</span>
+                <span style={{ ...styles.cardLabel, color: '#ffffff' }}>PAID</span>
                 <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalPaid.toLocaleString()}</span>
               </div>
               <div style={{ ...styles.cardRow, borderTop: '1px dotted rgba(255,255,255,0.5)', paddingTop: '0.5rem', marginTop: '0.25rem' }}>
-                <span style={{ ...styles.cardLabel, color: 'var(--color-on-primary)' }}>OWING</span>
+                <span style={{ ...styles.cardLabel, color: '#ffffff' }}>OWING</span>
                 <span style={{ ...styles.cardValue, color: 'var(--color-on-primary)' }}>${totalBalance.toLocaleString()}</span>
               </div>
             </div>
